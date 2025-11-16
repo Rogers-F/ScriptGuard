@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@wailsio/runtime': fileURLToPath(new URL('./src/wails-runtime.js', import.meta.url))
     }
   },
   server: {
@@ -16,7 +17,6 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     rollupOptions: {
-      external: ['@wailsio/runtime'],
       output: {
         manualChunks: {
           'element-plus': ['element-plus'],
