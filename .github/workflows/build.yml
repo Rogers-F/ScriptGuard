@@ -1,0 +1,106 @@
+name: Build ScriptGuard
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout代码
+        uses: actions/checkout@v4
+
+      - name: 设置Go环境
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: 设置Node.js环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 安装Wails CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+        shell: powershell
+
+      - name: 安装前端依赖
+        run: |
+          cd frontend
+          npm install
+        shell: powershell
+
+      - name: 安装Go依赖
+        run: go mod download
+        shell: powershell
+
+      - name: 构建应用
+        run: wails3 build
+        shell: powershell
+
+      - name: 检查构建产物
+        run: |
+          if (Test-Path "build/bin/ScriptGuard.exe") {
+            Write-Host "✅ 构建成功！"
+            Write-Host "文件大小: $((Get-Item build/bin/ScriptGuard.exe).Length / 1MB) MB"
+          } else {
+            Write-Host "❌ 构建失败，未找到exe文件"
+            exit 1
+          }
+        shell: powershell
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ScriptGuard-Windows-x64
+          path: build/bin/ScriptGuard.exe
+          retention-days: 30
+
+      - name: 创建Release（仅Tag触发）
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            build/bin/ScriptGuard.exe
+            README.md
+            config/app.yaml
+          body: |
+            ## 🎉 ScriptGuard ${{ github.ref_name }}
+
+            ### 📦 下载说明
+            1. 下载 `ScriptGuard.exe`
+            2. 双击运行即可
+            3. 首次运行会自动创建配置文件
+
+            ### ✨ 主要功能
+            - Python脚本定时执行
+            - Conda环境隔离
+            - 实时日志监控
+            - 执行历史分析
+            - 钉钉/企业微信告警
+
+            ### 📋 系统要求
+            - Windows 10/11 (64-bit)
+            - Anaconda 或 Miniconda
+
+            ### 📖 详细文档
+            请查看 [README.md](https://github.com/${{ github.repository }}/blob/main/README.md)
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 可选：Linux构建（如果需要跨平台）
+  # build-linux:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout代码
+  #       uses: actions/checkout@v4
+  #     # ... 类似Windows的步骤

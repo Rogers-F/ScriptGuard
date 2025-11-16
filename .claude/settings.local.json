@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"F:\\0-监控和定时启动脚本\" /b)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

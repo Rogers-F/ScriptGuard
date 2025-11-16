@@ -1,0 +1,69 @@
+// 全局样式变量
+:root {
+  --primary-color: #6366f1;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --border-color: #334155;
+}
+
+// Element Plus 深色主题定制
+html.dark {
+  --el-bg-color: #1e293b;
+  --el-bg-color-page: #0f172a;
+  --el-text-color-primary: #e2e8f0;
+  --el-text-color-regular: #cbd5e1;
+  --el-border-color: #334155;
+  --el-color-primary: #6366f1;
+  --el-color-success: #10b981;
+  --el-color-warning: #f59e0b;
+  --el-color-danger: #ef4444;
+}
+
+// 卡片样式
+.card {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(99, 102, 241, 0.2);
+  }
+}
+
+// 按钮样式增强
+.el-button--primary {
+  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+
+  &:hover {
+    background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+  }
+}
+
+// 滚动条样式
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+
+  &:hover {
+    background: #64748b;
+  }
+}
