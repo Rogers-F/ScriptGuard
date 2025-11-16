@@ -4,8 +4,14 @@ tasks:
   build:
     desc: Build the application
     cmds:
+      - task: generate
       - task: build:frontend
       - task: build:desktop
+
+  generate:
+    desc: Generate Wails bindings
+    cmds:
+      - wails3 generate
 
   build:frontend:
     desc: Build frontend assets
