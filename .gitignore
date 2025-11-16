@@ -21,7 +21,10 @@ go.work
 build/
 !build/appicon.png
 !build/windows/icon.ico
+!build/windows/info.json
+!build/windows/wails.exe.manifest
 !build/darwin/icons.png
+!build/Taskfile.yml
 dist/
 
 # Wails

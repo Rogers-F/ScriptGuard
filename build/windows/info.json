@@ -1,0 +1,23 @@
+{
+  "fixed": {
+    "file_version": "0.1.0",
+    "product_version": "0.1.0",
+    "file_description": "Python脚本监控与定时执行系统",
+    "product_name": "ScriptGuard",
+    "copyright": "Copyright © 2025 ScriptGuard",
+    "company_name": "ScriptGuard"
+  },
+  "info": {
+    "0000": {
+      "ProductVersion": "0.1.0",
+      "CompanyName": "ScriptGuard",
+      "FileDescription": "Python脚本监控与定时执行系统",
+      "FileVersion": "0.1.0",
+      "InternalName": "ScriptGuard",
+      "LegalCopyright": "Copyright © 2025 ScriptGuard",
+      "OriginalFilename": "ScriptGuard.exe",
+      "ProductName": "ScriptGuard - 脚本守护者",
+      "Comments": "ScriptGuard desktop application"
+    }
+  }
+}

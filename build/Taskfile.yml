@@ -1,0 +1,20 @@
+version: '3'
+
+vars:
+  ROOT_DIR:
+    sh: pwd
+  APP_NAME: ScriptGuard
+  BIN_NAME: ScriptGuard
+
+tasks:
+  generate:icons:
+    desc: "Generates Windows .ico and Mac .icns files from an image"
+    dir: '{{.ROOT_DIR}}/build'
+    cmds:
+      - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico
+
+  update:build-assets:
+    desc: "Updates the build assets with the latest application information"
+    dir: '{{.ROOT_DIR}}'
+    cmds:
+      - wails3 update build-assets --name "{{.APP_NAME}}" --binary "{{.BIN_NAME}}" --config wails.json
