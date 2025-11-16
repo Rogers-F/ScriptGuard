@@ -50,6 +50,27 @@ jobs:
           go mod download
         shell: powershell
 
+      - name: 安装 go-winres
+        run: go install github.com/tc-hib/go-winres@latest
+        shell: powershell
+
+      - name: 生成 Windows 资源文件
+        run: |
+          Write-Host "=== 创建 256x256 图标 ==="
+          python -c "from PIL import Image; img = Image.open('build/appicon.png'); img.resize((256, 256), Image.Resampling.LANCZOS).save('build/appicon_256.png')"
+
+          Write-Host "`n=== 生成 .syso 资源文件 ==="
+          go-winres make --in winres.json --arch amd64 --out rsrc
+
+          if (Test-Path "rsrc_windows_amd64.syso") {
+            $size = (Get-Item "rsrc_windows_amd64.syso").Length
+            Write-Host "✅ .syso 文件生成成功 (大小: $($size / 1024) KB)"
+          } else {
+            Write-Host "❌ .syso 文件生成失败"
+            exit 1
+          }
+        shell: powershell
+
       - name: 验证图标资源
         run: |
           Write-Host "=== 检查图标文件 ==="

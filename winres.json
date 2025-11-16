@@ -1,0 +1,36 @@
+{
+  "RT_GROUP_ICON": {
+    "APP": {
+      "0000": [
+        "build/appicon_256.png"
+      ]
+    }
+  },
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": "build/windows/wails.exe.manifest"
+    }
+  },
+  "RT_VERSION": {
+    "#1": {
+      "0000": {
+        "fixed": {
+          "file_version": "0.1.0.0",
+          "product_version": "0.1.0.0"
+        },
+        "info": {
+          "0409": {
+            "ProductVersion": "0.1.0",
+            "CompanyName": "ScriptGuard",
+            "FileDescription": "Python脚本监控与定时执行系统",
+            "FileVersion": "0.1.0",
+            "InternalName": "ScriptGuard",
+            "LegalCopyright": "Copyright © 2025 ScriptGuard",
+            "OriginalFilename": "ScriptGuard.exe",
+            "ProductName": "ScriptGuard"
+          }
+        }
+      }
+    }
+  }
+}
