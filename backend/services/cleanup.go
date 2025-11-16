@@ -3,6 +3,7 @@ package services
 import (
 	"scriptguard/backend/database"
 	"scriptguard/backend/models"
+	"strconv"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -45,8 +46,8 @@ func (s *CleanupService) cleanupOldLogs() {
 		return
 	}
 
-	var retentionDays int
-	if _, err := (&retentionDays).UnmarshalText([]byte(config.Value)); err != nil {
+	retentionDays, err := strconv.Atoi(config.Value)
+	if err != nil {
 		retentionDays = 30 // 默认30天
 	}
 

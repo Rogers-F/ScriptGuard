@@ -12,18 +12,21 @@ import (
 var assets embed.FS
 
 func main() {
+	appInstance := backend.NewApp()
+
 	app := application.New(application.Options{
 		Name:        "ScriptGuard",
 		Description: "Python脚本监控与定时执行系统",
 		Assets: application.AssetOptions{
-			Handler: application.AssetFileServerFS(assets),
+			FS: assets,
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
+		Services: []application.Service{
+			application.NewService(appInstance),
+		},
 	})
-
-	appInstance := backend.NewApp()
 
 	app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
 		Title:  "ScriptGuard - 脚本守护者",
@@ -37,9 +40,6 @@ func main() {
 		BackgroundColour: application.NewRGB(15, 23, 42),
 		URL:              "/",
 	})
-
-	app.OnStartup(appInstance.Startup)
-	app.OnShutdown(appInstance.Shutdown)
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
