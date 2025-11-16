@@ -133,22 +133,39 @@
         <el-form-item label="执行环境" prop="conda_env">
           <el-select
             v-model="taskForm.conda_env"
-            placeholder="选择Conda环境"
+            :placeholder="getEnvironmentPlaceholder()"
             style="width: 100%"
             filterable
+            :loading="taskStore.environmentsLoading"
           >
-            <el-option
-              v-for="env in taskStore.environments"
-              :key="env.name"
-              :label="env.name"
-              :value="env.name"
-              :disabled="!env.is_valid"
-            >
-              <div style="display: flex; justify-content: space-between; align-items: center">
-                <span>{{ env.name }}</span>
-                <el-tag v-if="!env.is_valid" type="danger" size="small">无效</el-tag>
-              </div>
-            </el-option>
+            <template v-if="taskStore.environmentsError">
+              <el-option disabled value="">
+                <div style="color: var(--el-color-danger); text-align: center; padding: 8px 0">
+                  {{ taskStore.environmentsError }}
+                </div>
+              </el-option>
+            </template>
+            <template v-else-if="!taskStore.environmentsLoading && taskStore.environments.length === 0">
+              <el-option disabled value="">
+                <div style="color: var(--el-text-color-secondary); text-align: center; padding: 8px 0">
+                  未找到 Conda 环境，请手动输入或检查 Conda 安装
+                </div>
+              </el-option>
+            </template>
+            <template v-else>
+              <el-option
+                v-for="env in taskStore.environments"
+                :key="env.name"
+                :label="env.name"
+                :value="env.name"
+                :disabled="!env.is_valid"
+              >
+                <div style="display: flex; justify-content: space-between; align-items: center">
+                  <span>{{ env.name }}</span>
+                  <el-tag v-if="!env.is_valid" type="danger" size="small">无效</el-tag>
+                </div>
+              </el-option>
+            </template>
           </el-select>
         </el-form-item>
 
@@ -307,6 +324,17 @@ async function executeTask(taskId) {
   } finally {
     executingTasks.value.delete(taskId)
   }
+}
+
+function getEnvironmentPlaceholder() {
+  if (taskStore.environmentsLoading) {
+    return '正在加载环境列表...'
+  } else if (taskStore.environmentsError) {
+    return '加载环境失败'
+  } else if (taskStore.environments.length === 0) {
+    return '未找到环境，可手动输入'
+  }
+  return '选择Conda环境'
 }
 
 async function selectScriptFile() {

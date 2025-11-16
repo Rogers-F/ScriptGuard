@@ -7,6 +7,8 @@ export const useTaskStore = defineStore('task', () => {
   const environments = ref([])
   const executions = ref([])
   const loading = ref(false)
+  const environmentsLoading = ref(false)
+  const environmentsError = ref(null)
 
   // 加载所有任务
   async function loadTasks() {
@@ -22,12 +24,17 @@ export const useTaskStore = defineStore('task', () => {
 
   // 加载环境列表
   async function loadEnvironments() {
+    environmentsLoading.value = true
+    environmentsError.value = null
     try {
       environments.value = await api.getEnvironments()
       return environments.value
     } catch (error) {
       console.error('加载环境失败:', error)
+      environmentsError.value = error.message || '加载失败'
       return []
+    } finally {
+      environmentsLoading.value = false
     }
   }
 
@@ -92,6 +99,8 @@ export const useTaskStore = defineStore('task', () => {
     environments,
     executions,
     loading,
+    environmentsLoading,
+    environmentsError,
     loadTasks,
     loadEnvironments,
     createTask,
