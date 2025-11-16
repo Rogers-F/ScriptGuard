@@ -16,6 +16,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     rollupOptions: {
+      external: ['@wailsio/runtime'],
       output: {
         manualChunks: {
           'element-plus': ['element-plus'],
