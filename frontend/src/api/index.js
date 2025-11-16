@@ -1,7 +1,5 @@
 // Wails 运行时导入
-import * as App from '../../bindings/scriptguard/backend/app'
-
-const {
+import {
   GetEnvironments,
   GetTasks,
   CreateTask,
@@ -14,7 +12,7 @@ const {
   GetAllConfig,
   UpdateConfig,
   SelectScriptFile
-} = App
+} from '../../bindings/scriptguard/backend/app'
 
 // API 封装
 export const api = {

@@ -8,6 +8,8 @@ import App from './App.vue'
 import router from './router'
 import './assets/styles/main.scss'
 
+console.log('🚀 ScriptGuard 正在启动...')
+
 const app = createApp(App)
 const pinia = createPinia()
 
@@ -18,12 +20,27 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 
 // 全局错误处理
 app.config.errorHandler = (err, instance, info) => {
-  console.error('Global error:', err, info)
-  // 可以在这里添加错误上报逻辑
+  console.error('❌ 全局错误:', err)
+  console.error('📍 错误位置:', info)
+  console.error('🔍 组件实例:', instance)
 }
+
+// 全局警告处理
+app.config.warnHandler = (msg, instance, trace) => {
+  console.warn('⚠️ Vue 警告:', msg)
+  console.warn('📍 调用栈:', trace)
+}
+
+// 路由错误处理
+router.onError((error) => {
+  console.error('❌ 路由错误:', error)
+})
 
 app.use(pinia)
 app.use(router)
 app.use(ElementPlus, { size: 'default' })
 
 app.mount('#app')
+
+console.log('✅ ScriptGuard 已挂载')
+console.log('📍 当前路由:', router.currentRoute.value.path)
