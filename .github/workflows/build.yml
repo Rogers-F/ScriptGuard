@@ -27,6 +27,11 @@ jobs:
         with:
           node-version: '18'
 
+      - name: 安装Task CLI
+        run: |
+          choco install go-task -y
+        shell: powershell
+
       - name: 安装Wails CLI
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
         shell: powershell

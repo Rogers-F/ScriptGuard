@@ -1,0 +1,58 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Build the application
+    cmds:
+      - task: build:frontend
+      - task: build:desktop
+
+  build:frontend:
+    desc: Build frontend assets
+    dir: frontend
+    cmds:
+      - npm run build
+
+  build:desktop:
+    desc: Build desktop application
+    cmds:
+      - go build -o build/bin/{{.OUTPUT_NAME}}{{.EXT}} -ldflags="-w -s" .
+    vars:
+      OUTPUT_NAME: ScriptGuard
+      EXT: '{{if eq OS "windows"}}.exe{{end}}'
+
+  dev:
+    desc: Run in development mode
+    deps:
+      - dev:frontend
+    cmds:
+      - go run .
+
+  dev:frontend:
+    desc: Start frontend development server
+    dir: frontend
+    cmds:
+      - npm run dev
+
+  install:
+    desc: Install dependencies
+    cmds:
+      - task: install:frontend
+      - task: install:backend
+
+  install:frontend:
+    desc: Install frontend dependencies
+    dir: frontend
+    cmds:
+      - npm install
+
+  install:backend:
+    desc: Install backend dependencies
+    cmds:
+      - go mod download
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf build/bin
+      - rm -rf frontend/dist
