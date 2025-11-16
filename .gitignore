@@ -20,6 +20,8 @@ go.work
 # Build output
 build/
 !build/appicon.png
+!build/windows/icon.ico
+!build/darwin/icons.png
 dist/
 
 # Wails
