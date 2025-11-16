@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"scriptguard/backend/database"
 	"scriptguard/backend/models"
+	"syscall"
 	"time"
 )
 
@@ -37,6 +38,7 @@ func (s *ExecutorService) ExecuteScript(task *models.Task) (*models.Execution, e
 	// 构建命令
 	cmdStr := fmt.Sprintf("conda activate %s && python %s", task.CondaEnv, task.ScriptPath)
 	cmd := exec.Command("cmd", "/C", cmdStr)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
 	// 捕获输出
 	stdout, _ := cmd.StdoutPipe()

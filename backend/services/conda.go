@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"scriptguard/backend/models"
 	"strings"
+	"syscall"
 )
 
 type CondaService struct{}
@@ -18,6 +19,7 @@ func NewCondaService() *CondaService {
 // ScanEnvironments 扫描所有conda环境
 func (s *CondaService) ScanEnvironments() ([]models.Environment, error) {
 	cmd := exec.Command("conda", "env", "list")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
@@ -57,5 +59,6 @@ func (s *CondaService) ScanEnvironments() ([]models.Environment, error) {
 // ValidateEnvironment 验证环境有效性
 func (s *CondaService) ValidateEnvironment(envName string) bool {
 	cmd := exec.Command("cmd", "/C", "conda activate "+envName+" && python --version")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd.Run() == nil
 }
