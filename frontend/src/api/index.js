@@ -12,7 +12,7 @@ import {
   GetAllConfig,
   UpdateConfig,
   SelectScriptFile
-} from '../../bindings/go/backend/App'
+} from '../../bindings/scriptguard/backend'
 
 // API 封装
 export const api = {
