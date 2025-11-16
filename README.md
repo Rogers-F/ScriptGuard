@@ -2,7 +2,8 @@
 
 <div align="center">
 
-![ScriptGuard Logo](https://img.shields.io/badge/ScriptGuard-v1.0.0-6366f1?style=for-the-badge)
+![ScriptGuard Logo](https://img.shields.io/badge/ScriptGuard-v0.1.0-6366f1?style=for-the-badge)
+![Build Status](https://img.shields.io/github/actions/workflow/status/Rogers-F/ScriptGuard/build.yml?style=for-the-badge)
 ![Wails](https://img.shields.io/badge/Wails-3.0-00ADD8?style=for-the-badge&logo=go)
 ![Vue](https://img.shields.io/badge/Vue-3.4-4FC08D?style=for-the-badge&logo=vue.js)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
@@ -60,7 +61,7 @@
 
 1. **下载最新版本**
 
-   前往 [Releases](https://github.com/yourname/scriptguard/releases) 页面下载 `ScriptGuard.exe`
+   前往 [Releases](https://github.com/Rogers-F/ScriptGuard/releases) 页面下载 `ScriptGuard.exe`
 
 2. **首次运行**
 
@@ -233,8 +234,8 @@ ScriptGuard支持标准的6位Cron表达式（支持秒级）：
 
 **克隆项目**
 ```bash
-git clone https://github.com/yourname/scriptguard.git
-cd scriptguard
+git clone https://github.com/Rogers-F/ScriptGuard.git
+cd ScriptGuard
 ```
 
 **安装依赖**
@@ -315,8 +316,8 @@ F:\0-监控和定时启动脚本\
 
 ## 📧 联系方式
 
-- 📮 Email: your.email@example.com
-- 💬 Issues: [GitHub Issues](https://github.com/yourname/scriptguard/issues)
+- 📮 Email: 1816524875@qq.com
+- 💬 Issues: [GitHub Issues](https://github.com/Rogers-F/ScriptGuard/issues)
 
 ---
 
@@ -324,6 +325,6 @@ F:\0-监控和定时启动脚本\
 
 **如果这个项目对你有帮助，请给个 ⭐Star 支持一下！**
 
-Made with ❤️ by [Your Name]
+Made with ❤️ by [Half open flowers](https://github.com/Rogers-F)
 
 </div>
