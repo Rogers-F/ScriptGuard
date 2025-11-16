@@ -78,10 +78,11 @@ jobs:
       - name: 检查构建产物
         run: |
           if (Test-Path "build/bin/ScriptGuard.exe") {
-            Write-Host "✅ 构建成功！"
-            Write-Host "文件大小: $((Get-Item build/bin/ScriptGuard.exe).Length / 1MB) MB"
+            Write-Host "Build successful!"
+            $size = (Get-Item build/bin/ScriptGuard.exe).Length / 1MB
+            Write-Host "File size: $size MB"
           } else {
-            Write-Host "❌ 构建失败，未找到exe文件"
+            Write-Host "Build failed: ScriptGuard.exe not found"
             exit 1
           }
         shell: powershell
