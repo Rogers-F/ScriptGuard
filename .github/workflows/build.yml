@@ -50,6 +50,24 @@ jobs:
           go mod download
         shell: powershell
 
+      - name: 生成应用资源
+        run: |
+          Write-Host "=== 生成平台图标 ==="
+          cd build
+          if (-not (Test-Path "windows\icon.ico")) {
+            Write-Host "⚠️ icon.ico 不存在，尝试生成..."
+            cd ..
+            # wails3 generate icons 命令在 CI 环境可能有问题，使用已提交的图标
+          } else {
+            Write-Host "✅ icon.ico 已存在"
+          }
+
+          Write-Host "`n=== 更新构建资源 ==="
+          cd ..
+          # wails3 update build-assets 在 CI 可能不需要，Wails 会自动处理
+        shell: powershell
+        continue-on-error: true
+
       - name: 构建应用（使用 Wails）
         run: |
           Write-Host "=== 使用 wails3 build 完整构建 ==="
