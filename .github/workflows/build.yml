@@ -22,7 +22,7 @@ jobs:
       - name: 设置Go环境
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.23'
 
       - name: 设置Node.js环境
         uses: actions/setup-node@v4
@@ -50,23 +50,32 @@ jobs:
           go mod download
         shell: powershell
 
-      - name: 生成应用资源
+      - name: 验证图标资源
         run: |
-          Write-Host "=== 生成平台图标 ==="
-          cd build
-          if (-not (Test-Path "windows\icon.ico")) {
-            Write-Host "⚠️ icon.ico 不存在，尝试生成..."
-            cd ..
-            # wails3 generate icons 命令在 CI 环境可能有问题，使用已提交的图标
+          Write-Host "=== 检查图标文件 ==="
+          if (Test-Path "build\windows\icon.ico") {
+            Write-Host "✅ icon.ico 存在"
+            $size = (Get-Item "build\windows\icon.ico").Length
+            Write-Host "   大小: $($size / 1024) KB"
           } else {
-            Write-Host "✅ icon.ico 已存在"
+            Write-Host "❌ icon.ico 不存在"
+            exit 1
           }
 
-          Write-Host "`n=== 更新构建资源 ==="
-          cd ..
-          # wails3 update build-assets 在 CI 可能不需要，Wails 会自动处理
+          if (Test-Path "build\appicon.png") {
+            Write-Host "✅ appicon.png 存在"
+          } else {
+            Write-Host "❌ appicon.png 不存在"
+            exit 1
+          }
+
+          if (Test-Path "build\windows\info.json") {
+            Write-Host "✅ info.json 存在"
+          } else {
+            Write-Host "❌ info.json 不存在"
+            exit 1
+          }
         shell: powershell
-        continue-on-error: true
 
       - name: 构建应用（使用 Wails）
         run: |
