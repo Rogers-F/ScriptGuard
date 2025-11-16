@@ -11,7 +11,7 @@ tasks:
   generate:
     desc: Generate Wails bindings
     cmds:
-      - wails3 generate
+      - wails3 generate bindings
 
   build:frontend:
     desc: Build frontend assets
