@@ -47,8 +47,28 @@ jobs:
           go mod download
         shell: powershell
 
-      - name: 构建应用
-        run: wails3 build
+      - name: 生成绑定代码
+        run: wails3 generate bindings
+        shell: powershell
+
+      - name: 调试-列出绑定文件
+        run: |
+          Write-Host "=== 检查 frontend/bindings 目录 ==="
+          if (Test-Path "frontend/bindings") {
+            Get-ChildItem -Path "frontend/bindings" -Recurse | Select-Object FullName
+          } else {
+            Write-Host "frontend/bindings 目录不存在！"
+          }
+        shell: powershell
+
+      - name: 构建前端
+        run: |
+          cd frontend
+          npm run build
+        shell: powershell
+
+      - name: 构建后端
+        run: go build -o build/bin/ScriptGuard.exe -ldflags="-w -s" .
         shell: powershell
 
       - name: 检查构建产物
