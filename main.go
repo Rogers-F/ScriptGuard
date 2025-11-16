@@ -37,6 +37,11 @@ func main() {
 		},
 		BackgroundColour: application.NewRGB(15, 23, 42),
 		URL:              "/",
+		KeyBindings: map[string]func(window *application.WebviewWindow){
+			"F12": func(window *application.WebviewWindow) {
+				window.OpenDevTools()
+			},
+		},
 	})
 	mainWindow.Show()
 
