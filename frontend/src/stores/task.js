@@ -24,8 +24,10 @@ export const useTaskStore = defineStore('task', () => {
   async function loadEnvironments() {
     try {
       environments.value = await api.getEnvironments()
+      return environments.value
     } catch (error) {
       console.error('加载环境失败:', error)
+      return []
     }
   }
 

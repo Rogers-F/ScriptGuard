@@ -22,10 +22,11 @@ tasks:
   build:desktop:
     desc: Build desktop application
     cmds:
-      - go build -o build/bin/{{.OUTPUT_NAME}}{{.EXT}} -ldflags="-w -s" .
+      - go build -o build/bin/{{.OUTPUT_NAME}}{{.EXT}} -ldflags="{{.LDFLAGS}}" .
     vars:
       OUTPUT_NAME: ScriptGuard
       EXT: '{{if eq OS "windows"}}.exe{{end}}'
+      LDFLAGS: '{{if eq OS "windows"}}-w -s -H windowsgui{{else}}-w -s{{end}}'
 
   dev:
     desc: Run in development mode

@@ -187,6 +187,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, VideoPlay, Edit, Delete, Document, Box, Clock, Bell } from '@element-plus/icons-vue'
 import { useTaskStore } from '@/stores/task'
 import CronEditor from '@/components/CronEditor.vue'
+import api from '@/api'
 
 const taskStore = useTaskStore()
 const showCreateDialog = ref(false)
