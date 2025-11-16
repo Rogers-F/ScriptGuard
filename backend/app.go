@@ -5,6 +5,8 @@ import (
 	"scriptguard/backend/database"
 	"scriptguard/backend/models"
 	"scriptguard/backend/services"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type App struct {
@@ -20,7 +22,7 @@ func NewApp() *App {
 	return &App{}
 }
 
-func (a *App) Startup(ctx context.Context) {
+func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	a.ctx = ctx
 
 	// 初始化数据库
@@ -42,11 +44,14 @@ func (a *App) Startup(ctx context.Context) {
 
 	// 启动日志流转发（将executor的logChan转发到前端Event）
 	go a.startLogStreaming()
+
+	return nil
 }
 
-func (a *App) Shutdown(ctx context.Context) {
+func (a *App) ServiceShutdown() error {
 	a.scheduler.Stop()
 	a.cleanup.Stop()
+	return nil
 }
 
 func (a *App) loadTasks() {
