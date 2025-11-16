@@ -25,7 +25,7 @@ func NewApp() *App {
 
 func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	a.ctx = ctx
-	a.app = options.App
+	a.app = application.Get()
 
 	// 初始化数据库
 	database.InitDB("./database/scriptguard.db")
