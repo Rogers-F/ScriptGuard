@@ -35,6 +35,9 @@ func main() {
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
+		Windows: application.WindowsWindow{
+			DisableIcon: false,
+		},
 		BackgroundColour: application.NewRGB(15, 23, 42),
 		URL:              "/",
 		KeyBindings: map[string]func(window application.Window){
