@@ -47,48 +47,21 @@ jobs:
           go mod download
         shell: powershell
 
-      - name: 生成绑定代码
+      - name: 构建应用（使用 Wails）
         run: |
-          Write-Host "=== 当前目录 ==="
-          Get-Location
-          Write-Host "`n=== 运行 wails3 generate bindings ==="
-          wails3 generate bindings
-          Write-Host "`n=== 检查根目录下的 bindings ==="
-          if (Test-Path "bindings") {
-            Write-Host "根目录 bindings 存在"
-            Get-ChildItem -Path "bindings" -Recurse | ForEach-Object { Write-Host $_.FullName }
-          } else {
-            Write-Host "根目录 bindings 不存在"
-          }
-          Write-Host "`n=== 检查 frontend/bindings ==="
+          Write-Host "=== 使用 wails3 build 完整构建 ==="
+          wails3 build
+
+          Write-Host "`n=== 检查构建后的 bindings ==="
           if (Test-Path "frontend/bindings") {
-            Write-Host "frontend/bindings 存在"
-            Get-ChildItem -Path "frontend/bindings" -Recurse | ForEach-Object { Write-Host $_.FullName }
+            Write-Host "✅ frontend/bindings 存在"
+            Get-ChildItem -Path "frontend/bindings" -Recurse -File | Select-Object -First 20 | ForEach-Object {
+              Write-Host "  - $($_.FullName.Replace('D:\a\ScriptGuard\ScriptGuard\', ''))"
+            }
           } else {
-            Write-Host "frontend/bindings 不存在"
+            Write-Host "❌ frontend/bindings 不存在"
+            exit 1
           }
-          Write-Host "`n=== 检查 frontend 下所有目录 ==="
-          Get-ChildItem -Path "frontend" -Directory | ForEach-Object { Write-Host $_.Name }
-        shell: powershell
-        continue-on-error: true
-
-      - name: 手动复制绑定文件（如果在根目录）
-        run: |
-          if (Test-Path "bindings") {
-            Write-Host "发现根目录 bindings，复制到 frontend/"
-            Copy-Item -Path "bindings" -Destination "frontend/bindings" -Recurse -Force
-          }
-        shell: powershell
-        continue-on-error: true
-
-      - name: 构建前端
-        run: |
-          cd frontend
-          npm run build
-        shell: powershell
-
-      - name: 构建后端
-        run: go build -o build/bin/ScriptGuard.exe -ldflags="-w -s" .
         shell: powershell
 
       - name: 检查构建产物
