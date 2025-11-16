@@ -50,29 +50,6 @@ jobs:
           go mod download
         shell: powershell
 
-      - name: 生成应用图标
-        run: |
-          Write-Host "=== 安装图标转换工具 ==="
-          choco install imagemagick -y
-
-          Write-Host "`n=== 刷新环境变量 ==="
-          $env:PATH = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-
-          Write-Host "`n=== 转换 SVG 到 PNG ==="
-          # ImageMagick 7+ 使用 magick 命令而非 magick convert
-          magick -background none -density 300 -resize 256x256 assets/icon-design.svg build/appicon.png
-
-          Write-Host "`n=== 检查生成的图标 ==="
-          if (Test-Path "build/appicon.png") {
-            $size = (Get-Item build/appicon.png).Length
-            Write-Host "appicon.png generated (size: $size bytes)"
-          } else {
-            Write-Host "appicon.png generation failed"
-            exit 1
-          }
-        shell: powershell
-        continue-on-error: false
-
       - name: 构建应用（使用 Wails）
         run: |
           Write-Host "=== 使用 wails3 build 完整构建 ==="
