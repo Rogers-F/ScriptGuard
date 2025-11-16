@@ -23,6 +23,8 @@ dist/
 
 # Wails
 wailsjs/
+bindings/
+frontend/bindings/
 .wails/
 frontend/dist/
 frontend/node_modules/

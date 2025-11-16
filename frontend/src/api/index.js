@@ -12,7 +12,7 @@ import {
   GetAllConfig,
   UpdateConfig,
   SelectScriptFile
-} from '../../wailsjs/go/backend/App'
+} from '../../bindings/go/backend/App'
 
 // API 封装
 export const api = {
