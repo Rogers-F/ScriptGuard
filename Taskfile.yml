@@ -1,15 +1,10 @@
 version: '3'
 
-includes:
-  build: ./build/Taskfile.yml
-
 tasks:
   build:
     desc: Build the application
     cmds:
       - task: generate
-      - task: build:generate:icons
-      - task: build:update:build-assets
       - task: build:frontend
       - task: build:desktop
 
