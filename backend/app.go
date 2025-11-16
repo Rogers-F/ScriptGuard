@@ -11,6 +11,7 @@ import (
 
 type App struct {
 	ctx       context.Context
+	app       *application.App
 	conda     *services.CondaService
 	executor  *services.ExecutorService
 	scheduler *services.SchedulerService
@@ -24,6 +25,7 @@ func NewApp() *App {
 
 func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	a.ctx = ctx
+	a.app = options.App
 
 	// 初始化数据库
 	database.InitDB("./database/scriptguard.db")
@@ -205,19 +207,18 @@ func (a *App) UpdateConfig(key, value string) error {
 
 // SelectScriptFile 打开文件选择对话框选择Python脚本
 func (a *App) SelectScriptFile() (string, error) {
-	// Wails 3的文件对话框API
-	// 注意：实际使用时需要调整为正确的API
-	// 由于Wails 3的API可能还在变化，这里返回一个占位实现
-	// 实际运行时需要使用: runtime.OpenFileDialog(a.ctx, ...)
-	return "", nil
+	if a.app == nil {
+		return "", nil
+	}
 
-	// 正确的实现应该类似这样（需要导入runtime包）:
-	// selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-	// 	Title: "选择Python脚本",
-	// 	Filters: []runtime.FileFilter{
-	// 		{DisplayName: "Python Scripts (*.py)", Pattern: "*.py"},
-	// 		{DisplayName: "All Files (*.*)", Pattern: "*.*"},
-	// 	},
-	// })
-	// return selection, err
+	dialog := a.app.Dialog.OpenFile()
+	dialog.SetTitle("选择Python脚本")
+	dialog.AddFilter("Python脚本", "*.py")
+	dialog.AddFilter("所有文件", "*.*")
+
+	path, err := dialog.PromptForSingleSelection()
+	if err != nil {
+		return "", err
+	}
+	return path, nil
 }

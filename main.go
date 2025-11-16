@@ -26,7 +26,7 @@ func main() {
 		},
 	})
 
-	app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	mainWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:  "ScriptGuard - 脚本守护者",
 		Width:  1400,
 		Height: 900,
@@ -38,6 +38,7 @@ func main() {
 		BackgroundColour: application.NewRGB(15, 23, 42),
 		URL:              "/",
 	})
+	mainWindow.Show()
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
