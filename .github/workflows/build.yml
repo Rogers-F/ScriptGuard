@@ -54,29 +54,29 @@ jobs:
         run: go install github.com/tc-hib/go-winres@latest
         shell: powershell
 
-      - name: 生成 Windows 资源文件
+      - name: Generate Windows Resources
         run: |
-          Write-Host "=== 安装 Pillow ==="
+          Write-Host "=== Installing Pillow ==="
           python -m pip install --quiet pillow
 
-          Write-Host "`n=== 创建 256x256 图标 ==="
+          Write-Host "`n=== Creating 256x256 icon ==="
           python -c "from PIL import Image; img = Image.open('build/appicon.png'); img.resize((256, 256), Image.Resampling.LANCZOS).save('build/appicon_256.png')"
 
           if (Test-Path "build/appicon_256.png") {
-            Write-Host "✅ 256x256 图标创建成功"
+            Write-Host "OK: 256x256 icon created"
           } else {
-            Write-Host "❌ 256x256 图标创建失败"
+            Write-Host "ERROR: Failed to create 256x256 icon"
             exit 1
           }
 
-          Write-Host "`n=== 生成 .syso 资源文件 ==="
+          Write-Host "`n=== Generating .syso resource file ==="
           go-winres make --in winres.json --arch amd64 --out rsrc
 
           if (Test-Path "rsrc_windows_amd64.syso") {
-            $size = (Get-Item "rsrc_windows_amd64.syso").Length
-            Write-Host "✅ .syso 文件生成成功 (大小: $($size / 1024) KB)"
+            $size = (Get-Item "rsrc_windows_amd64.syso").Length / 1KB
+            Write-Host "OK: .syso file generated (size: $size KB)"
           } else {
-            Write-Host "❌ .syso 文件生成失败"
+            Write-Host "ERROR: Failed to generate .syso file"
             exit 1
           }
         shell: powershell
