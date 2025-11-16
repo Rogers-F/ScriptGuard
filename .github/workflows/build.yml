@@ -62,7 +62,18 @@ jobs:
             Write-Host "❌ frontend/bindings 不存在"
             exit 1
           }
+
+          Write-Host "`n=== 查看 index.js 内容 ==="
+          if (Test-Path "frontend/bindings/scriptguard/backend/index.js") {
+            Get-Content "frontend/bindings/scriptguard/backend/index.js" | Select-Object -First 30
+          }
+
+          Write-Host "`n=== 查看 app.js 内容 ==="
+          if (Test-Path "frontend/bindings/scriptguard/backend/app.js") {
+            Get-Content "frontend/bindings/scriptguard/backend/app.js" | Select-Object -First 30
+          }
         shell: powershell
+        continue-on-error: true
 
       - name: 检查构建产物
         run: |
