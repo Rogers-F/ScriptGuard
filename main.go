@@ -23,12 +23,12 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
-		Services: []application.Service{
-			application.NewService(appInstance),
+		Bind: []interface{}{
+			appInstance,
 		},
 	})
 
-	app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	window := app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
 		Title:  "ScriptGuard - 脚本守护者",
 		Width:  1400,
 		Height: 900,
@@ -39,6 +39,14 @@ func main() {
 		},
 		BackgroundColour: application.NewRGB(15, 23, 42),
 		URL:              "/",
+	})
+
+	window.On(application.EventWindowDidLoad, func(event *application.WindowEvent) {
+		appInstance.Startup(event.Context())
+	})
+
+	window.On(application.EventWindowClosing, func(event *application.WindowEvent) {
+		appInstance.Shutdown()
 	})
 
 	if err := app.Run(); err != nil {
