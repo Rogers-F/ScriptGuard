@@ -8,6 +8,11 @@ tasks:
       - task: build:frontend
       - task: build:desktop
 
+  windows:build:
+    desc: Windows 构建入口（供 wails3 build 调用）
+    cmds:
+      - task: build
+
   generate:
     desc: Generate Wails bindings
     cmds:
