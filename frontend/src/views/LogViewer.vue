@@ -45,8 +45,8 @@
 
       <div class="terminal-body" ref="logBodyRef">
         <div
-          v-for="(log, index) in filteredLogs"
-          :key="index"
+          v-for="log in filteredLogs"
+          :key="log.id || log.timestamp"
           class="log-line"
           :class="log.level"
         >
@@ -66,13 +66,16 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { Search, VideoPlay, VideoPause, Delete, Document } from '@element-plus/icons-vue'
 import { useTaskStore } from '@/stores/task'
 import api from '@/api'
 
+const route = useRoute()
 const taskStore = useTaskStore()
 
 const selectedTask = ref('')
+const selectedExecution = ref('')
 const searchText = ref('')
 const autoScroll = ref(true)
 const logs = ref([])
@@ -109,7 +112,7 @@ function scrollToBottom() {
 }
 
 function formatTime(time) {
-  return new Date(time).toLocaleTimeString('zh-CN', { hour12: false })
+  return new Date(time).toLocaleTimeString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' })
 }
 
 function clearLogs() {
@@ -122,7 +125,10 @@ async function loadLogs() {
 
   isLoading.value = true
   try {
-    const result = await api.getLogs('', selectedTask.value, 1000)
+    // 优先按 execution_id 查询，其次按 task_id
+    const result = selectedExecution.value
+      ? await api.getLogs(selectedExecution.value, '', 1000)
+      : await api.getLogs('', selectedTask.value, 1000)
     logs.value = result || []
   } catch (error) {
     console.error('加载日志失败:', error)
@@ -135,6 +141,11 @@ async function loadLogs() {
 let logInterval = null
 
 onMounted(async () => {
+  // 解析 URL query 参数（从执行历史页跳转过来时带 execution 参数）
+  if (route.query.execution) {
+    selectedExecution.value = route.query.execution
+  }
+
   await taskStore.loadTasks()
   await loadLogs()
 
@@ -152,6 +163,8 @@ onUnmounted(() => {
 
 // 监听选中任务变化，重新加载日志
 watch(selectedTask, () => {
+  // SG-017': 选择任务时清空 execution 过滤，避免冲突
+  selectedExecution.value = ''
   loadLogs()
 })
 </script>

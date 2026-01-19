@@ -2,7 +2,9 @@ package models
 
 import (
 	"time"
+
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type ExecutionStatus string
@@ -24,11 +26,15 @@ type Execution struct {
 	ErrorMessage string          `json:"error_message"`
 }
 
-func (e *Execution) BeforeCreate() error {
+func (e *Execution) BeforeCreate(_ *gorm.DB) error {
 	if e.ID == "" {
 		e.ID = uuid.New().String()
 	}
-	e.StartTime = time.Now()
-	e.Status = StatusRunning
+	if e.StartTime.IsZero() {
+		e.StartTime = time.Now()
+	}
+	if e.Status == "" {
+		e.Status = StatusRunning
+	}
 	return nil
 }

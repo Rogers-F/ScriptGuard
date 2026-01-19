@@ -295,7 +295,22 @@ onMounted(async () => {
 
 async function loadExecutions() {
   await taskStore.loadExecutions(selectedTask.value, 100)
-  executions.value = taskStore.executions
+  let result = taskStore.executions
+
+  // SG-025: 日期范围过滤
+  if (dateRange.value && dateRange.value.length === 2) {
+    const startDate = new Date(dateRange.value[0])
+    startDate.setHours(0, 0, 0, 0)
+    const endDate = new Date(dateRange.value[1])
+    endDate.setHours(23, 59, 59, 999)
+
+    result = result.filter(e => {
+      const execTime = new Date(e.start_time)
+      return execTime >= startDate && execTime <= endDate
+    })
+  }
+
+  executions.value = result
 
   // 计算统计数据
   stats.total = executions.value.length
@@ -320,12 +335,13 @@ function formatTime(time) {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: 'Asia/Shanghai'
   })
 }
 
 function formatFullTime(time) {
-  return new Date(time).toLocaleString('zh-CN')
+  return new Date(time).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
 }
 
 function getStatusType(status) {

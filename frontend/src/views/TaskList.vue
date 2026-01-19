@@ -214,6 +214,7 @@ const executingTasks = ref(new Set())
 const taskFormRef = ref(null)
 
 const taskForm = reactive({
+  id: '',
   name: '',
   script_path: '',
   conda_env: '',
@@ -272,6 +273,7 @@ async function saveTask() {
 
 function resetForm() {
   Object.assign(taskForm, {
+    id: '',
     name: '',
     script_path: '',
     conda_env: '',

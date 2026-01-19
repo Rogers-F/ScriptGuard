@@ -67,6 +67,7 @@
       <el-time-picker
         v-model="dailyTime"
         format="HH:mm:ss"
+        value-format="HH:mm:ss"
         placeholder="选择时间"
         @change="generateCron"
         style="width: 200px"
@@ -88,6 +89,7 @@
       <el-time-picker
         v-model="weeklyTime"
         format="HH:mm:ss"
+        value-format="HH:mm:ss"
         placeholder="选择时间"
         @change="generateCron"
         style="width: 200px"
@@ -104,6 +106,7 @@
       <el-time-picker
         v-model="monthlyTime"
         format="HH:mm:ss"
+        value-format="HH:mm:ss"
         placeholder="选择时间"
         @change="generateCron"
         style="width: 200px"
@@ -124,7 +127,7 @@
         />
         <el-select v-model="intervalUnit" @change="generateCron" style="width: 120px">
           <el-option label="分钟" value="minute" />
-          <el-option label="���时" value="hour" />
+          <el-option label="小时" value="hour" />
           <el-option label="天" value="day" />
         </el-select>
         <span>执行一次</span>
@@ -159,17 +162,20 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const frequency = ref('specific')
+// SG-001: 标记是否从 modelValue 初始化
+const initializedFromModelValue = ref(false)
+
 // 新增：指定时间模式
 const specificHour = ref(11)
 const specificMinute = ref(0)
 const specificSecond = ref(0)
 const currentBeijingTime = ref('')
 
-const dailyTime = ref(new Date('2024-01-01 09:00:00'))
+const dailyTime = ref('09:00:00')
 const weekDays = ref([1]) // 周一
-const weeklyTime = ref(new Date('2024-01-01 09:00:00'))
+const weeklyTime = ref('09:00:00')
 const monthDay = ref(1)
-const monthlyTime = ref(new Date('2024-01-01 09:00:00'))
+const monthlyTime = ref('09:00:00')
 const intervalValue = ref(30)
 const intervalUnit = ref('minute')
 const cronExpr = ref('')
@@ -208,22 +214,37 @@ const scheduleDescription = computed(() => {
   }
 })
 
-function formatTimeWithSeconds(date) {
-  if (!date) return '00:00:00'
-  const h = String(date.getHours()).padStart(2, '0')
-  const m = String(date.getMinutes()).padStart(2, '0')
-  const s = String(date.getSeconds()).padStart(2, '0')
+function formatTimeWithSeconds(value) {
+  if (!value) return '00:00:00'
+  if (typeof value === 'string') return value
+  const h = String(value.getHours()).padStart(2, '0')
+  const m = String(value.getMinutes()).padStart(2, '0')
+  const s = String(value.getSeconds()).padStart(2, '0')
   return `${h}:${m}:${s}`
 }
 
-// 获取北京时间（UTC+8）
+// SG-024: 获取北京时间（UTC+8），使用 Intl.DateTimeFormat 确保跨时区正确
 function getBeijingTime() {
   const now = new Date()
-  // 获取UTC时间
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000)
-  // 转换为北京时间（UTC+8）
-  const beijingTime = new Date(utc + (3600000 * 8))
-  return beijingTime
+  // 使用 Intl.DateTimeFormat 获取北京时区的时间组件
+  const formatter = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false
+  })
+  const parts = formatter.formatToParts(now)
+  const h = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10)
+  const m = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10)
+  const s = parseInt(parts.find(p => p.type === 'second')?.value || '0', 10)
+
+  // 返回一个模拟的 Date 对象，其 getHours/getMinutes/getSeconds 返回北京时间
+  return {
+    getHours: () => h,
+    getMinutes: () => m,
+    getSeconds: () => s
+  }
 }
 
 // 更新当前北京时间显示
@@ -245,6 +266,97 @@ function handleFrequencyChange() {
   generateCron()
 }
 
+// SG-024: 格式化时间字符串
+function formatTimeString(h, m, s) {
+  const hh = String(h || 0).padStart(2, '0')
+  const mm = String(m || 0).padStart(2, '0')
+  const ss = String(s || 0).padStart(2, '0')
+  return `${hh}:${mm}:${ss}`
+}
+
+// SG-024: 解析时间字符串
+function parseTimeString(val) {
+  const parts = String(val || '00:00:00').split(':')
+  const h = parseInt(parts[0] || '0', 10) || 0
+  const m = parseInt(parts[1] || '0', 10) || 0
+  const s = parseInt(parts[2] || '0', 10) || 0
+  return { h, m, s }
+}
+
+// SG-001: 反向解析 Cron 表达式到 UI 状态
+function applyCronToState(expr) {
+  const val = (expr || '').trim()
+  if (!val) return false
+
+  // interval: minutes - 0 */N * * * *
+  let match = val.match(/^0 \*\/(\d+) \* \* \* \*$/)
+  if (match) {
+    frequency.value = 'interval'
+    intervalUnit.value = 'minute'
+    intervalValue.value = parseInt(match[1], 10)
+    return true
+  }
+
+  // interval: hours - 0 0 */N * * *
+  match = val.match(/^0 0 \*\/(\d+) \* \* \*$/)
+  if (match) {
+    frequency.value = 'interval'
+    intervalUnit.value = 'hour'
+    intervalValue.value = parseInt(match[1], 10)
+    return true
+  }
+
+  // interval: days - 0 0 0 */N * *
+  match = val.match(/^0 0 0 \*\/(\d+) \* \*$/)
+  if (match) {
+    frequency.value = 'interval'
+    intervalUnit.value = 'day'
+    intervalValue.value = parseInt(match[1], 10)
+    return true
+  }
+
+  // monthly: s m h dom * *
+  match = val.match(/^(\d{1,2}) (\d{1,2}) (\d{1,2}) (\d{1,2}) \* \*$/)
+  if (match) {
+    frequency.value = 'monthly'
+    const s = parseInt(match[1], 10)
+    const m = parseInt(match[2], 10)
+    const h = parseInt(match[3], 10)
+    monthDay.value = parseInt(match[4], 10)
+    monthlyTime.value = formatTimeString(h, m, s)
+    return true
+  }
+
+  // weekly: s m h * * dowlist
+  match = val.match(/^(\d{1,2}) (\d{1,2}) (\d{1,2}) \* \* ([0-6](?:,[0-6])*)$/)
+  if (match) {
+    frequency.value = 'weekly'
+    const s = parseInt(match[1], 10)
+    const m = parseInt(match[2], 10)
+    const h = parseInt(match[3], 10)
+    weekDays.value = match[4].split(',').map(x => parseInt(x, 10))
+    weeklyTime.value = formatTimeString(h, m, s)
+    return true
+  }
+
+  // daily/specific: s m h * * *
+  match = val.match(/^(\d{1,2}) (\d{1,2}) (\d{1,2}) \* \* \*$/)
+  if (match) {
+    frequency.value = 'specific'
+    specificSecond.value = parseInt(match[1], 10)
+    specificMinute.value = parseInt(match[2], 10)
+    specificHour.value = parseInt(match[3], 10)
+    dailyTime.value = formatTimeString(
+      parseInt(match[3], 10),
+      parseInt(match[2], 10),
+      parseInt(match[1], 10)
+    )
+    return true
+  }
+
+  return false
+}
+
 function generateCron() {
   let cron = ''
 
@@ -259,24 +371,18 @@ function generateCron() {
       break
     }
     case 'daily': {
-      const s = dailyTime.value.getSeconds()
-      const m = dailyTime.value.getMinutes()
-      const h = dailyTime.value.getHours()
+      const { h, m, s } = parseTimeString(dailyTime.value)
       cron = `${s} ${m} ${h} * * *`
       break
     }
     case 'weekly': {
-      const s = weeklyTime.value.getSeconds()
-      const m = weeklyTime.value.getMinutes()
-      const h = weeklyTime.value.getHours()
+      const { h, m, s } = parseTimeString(weeklyTime.value)
       const days = weekDays.value.sort((a, b) => a - b).join(',')
       cron = `${s} ${m} ${h} * * ${days}`
       break
     }
     case 'monthly': {
-      const s = monthlyTime.value.getSeconds()
-      const m = monthlyTime.value.getMinutes()
-      const h = monthlyTime.value.getHours()
+      const { h, m, s } = parseTimeString(monthlyTime.value)
       cron = `${s} ${m} ${h} ${monthDay.value} * *`
       break
     }
@@ -296,28 +402,29 @@ function generateCron() {
   emit('update:modelValue', cron)
 }
 
-// 初始化时生成cron
+// SG-001: 监听 modelValue，解析已有 Cron 表达式
 watch(() => props.modelValue, (val) => {
+  cronExpr.value = val || ''
   if (val) {
-    cronExpr.value = val
-    // TODO: 可以添加反向解析逻辑
+    initializedFromModelValue.value = true
+    applyCronToState(val)
   }
 }, { immediate: true })
 
 // 生命周期
 onMounted(() => {
-  // 初始化时使用当前北京时间
-  const beijing = getBeijingTime()
-  specificHour.value = beijing.getHours()
-  specificMinute.value = beijing.getMinutes()
-  specificSecond.value = beijing.getSeconds()
-
   // 更新当前时间显示
   updateCurrentTime()
   timeInterval = setInterval(updateCurrentTime, 1000)
 
-  // 生成初始Cron
-  generateCron()
+  // SG-001: 只有创建场景（modelValue 为空）才自动生成默认 cron
+  if (!initializedFromModelValue.value) {
+    const beijing = getBeijingTime()
+    specificHour.value = beijing.getHours()
+    specificMinute.value = beijing.getMinutes()
+    specificSecond.value = beijing.getSeconds()
+    generateCron()
+  }
 })
 
 onUnmounted(() => {

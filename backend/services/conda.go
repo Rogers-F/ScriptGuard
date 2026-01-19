@@ -2,6 +2,7 @@ package services
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -9,29 +10,26 @@ import (
 	"scriptguard/backend/models"
 	"strings"
 	"syscall"
+	"time"
 )
 
-type CondaService struct {
-	scanAttempts int
-	lastScanErr  error
-}
+// SG-028: 删除未使用的 scanAttempts 和 lastScanErr 字段
+type CondaService struct{}
 
 func NewCondaService() *CondaService {
-	return &CondaService{
-		scanAttempts: 0,
-	}
+	return &CondaService{}
 }
+
+// SG-027: conda 命令超时时间
+const condaTimeout = 30 * time.Second
 
 // ScanEnvironments 扫描所有conda环境
 func (s *CondaService) ScanEnvironments() ([]models.Environment, error) {
-	// 如果已经失败3次，直接返回上次的错误，避免无限重试
-	if s.scanAttempts >= 3 && s.lastScanErr != nil {
-		return []models.Environment{}, s.lastScanErr
-	}
+	// SG-027: 添加超时控制
+	ctx, cancel := context.WithTimeout(context.Background(), condaTimeout)
+	defer cancel()
 
-	s.scanAttempts++
-
-	cmd := exec.Command("conda", "env", "list")
+	cmd := exec.CommandContext(ctx, "conda", "env", "list")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	var out bytes.Buffer
 	var errOut bytes.Buffer
@@ -39,17 +37,17 @@ func (s *CondaService) ScanEnvironments() ([]models.Environment, error) {
 	cmd.Stderr = &errOut
 
 	if err := cmd.Run(); err != nil {
-		s.lastScanErr = err
-		// 达到3次重试后，返回友好的错误信息
-		if s.scanAttempts >= 3 {
-			return []models.Environment{}, fmt.Errorf("无法找到 Conda 环境（已尝试 %d 次）。请确保已安装 Anaconda/Miniconda 并添加到系统 PATH，或手动配置环境路径", s.scanAttempts)
+		// 检查是否超时
+		if ctx.Err() == context.DeadlineExceeded {
+			return nil, fmt.Errorf("执行 conda env list 超时（%v）", condaTimeout)
 		}
-		return nil, err
+		// 将 stderr 合入错误信息，提升可诊断性
+		stderr := strings.TrimSpace(errOut.String())
+		if stderr != "" {
+			return nil, fmt.Errorf("执行 conda env list 失败: %w; stderr=%s", err, stderr)
+		}
+		return nil, fmt.Errorf("执行 conda env list 失败: %w。请确保已安装 Anaconda/Miniconda 并添加到系统 PATH", err)
 	}
-
-	// 成功扫描后重置计数器
-	s.scanAttempts = 0
-	s.lastScanErr = nil
 
 	envs := []models.Environment{}
 	lines := strings.Split(out.String(), "\n")
@@ -80,9 +78,13 @@ func (s *CondaService) ScanEnvironments() ([]models.Environment, error) {
 	return envs, nil
 }
 
-// ValidateEnvironment 验证环境有效性
+// ValidateEnvironment 验证环境有效性（使用参数化执行，避免注入）
 func (s *CondaService) ValidateEnvironment(envName string) bool {
-	cmd := exec.Command("cmd", "/C", "conda activate "+envName+" && python --version")
+	// SG-027: 添加超时控制
+	ctx, cancel := context.WithTimeout(context.Background(), condaTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "conda", "run", "-n", envName, "python", "--version")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd.Run() == nil
 }

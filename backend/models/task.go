@@ -2,7 +2,9 @@ package models
 
 import (
 	"time"
+
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type Task struct {
@@ -17,7 +19,7 @@ type Task struct {
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 
-func (t *Task) BeforeCreate() error {
+func (t *Task) BeforeCreate(_ *gorm.DB) error {
 	if t.ID == "" {
 		t.ID = uuid.New().String()
 	}

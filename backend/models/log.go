@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type LogLevel string
@@ -26,7 +27,7 @@ type Log struct {
 	Content     string    `json:"content" gorm:"type:text"`
 }
 
-func (l *Log) BeforeCreate() error {
+func (l *Log) BeforeCreate(_ *gorm.DB) error {
 	if l.ID == "" {
 		l.ID = uuid.New().String()
 	}

@@ -91,6 +91,18 @@
                   同时执行的任务数量上限
                 </span>
               </el-form-item>
+
+              <el-form-item label="执行超时（秒）">
+                <el-input-number
+                  v-model="systemForm.execution_timeout_seconds"
+                  :min="0"
+                  :max="86400"
+                  :step="60"
+                />
+                <span class="form-help">
+                  0 表示不限制；允许范围 0 或 60~86400 秒（1分钟~24小时）
+                </span>
+              </el-form-item>
             </div>
           </el-form>
         </div>
@@ -220,7 +232,8 @@ const notificationForm = reactive({
 
 const systemForm = reactive({
   log_retention_days: 30,
-  max_concurrency: 5
+  max_concurrency: 5,
+  execution_timeout_seconds: 3600
 })
 
 onMounted(async () => {
@@ -241,6 +254,7 @@ async function loadSettings() {
     // 加载系统配置
     systemForm.log_retention_days = parseInt(config.log_retention_days) || 30
     systemForm.max_concurrency = parseInt(config.max_concurrency) || 5
+    systemForm.execution_timeout_seconds = parseInt(config.execution_timeout_seconds) || 3600
   } catch (error) {
     ElMessage.error('加载配置失败: ' + error.message)
   }
@@ -256,6 +270,7 @@ async function saveSettings() {
     // 保存系统配置
     await api.updateConfig('log_retention_days', systemForm.log_retention_days.toString())
     await api.updateConfig('max_concurrency', systemForm.max_concurrency.toString())
+    await api.updateConfig('execution_timeout_seconds', systemForm.execution_timeout_seconds.toString())
 
     ElMessage.success('设置已保存')
   } catch (error) {
@@ -298,8 +313,14 @@ function testNotification(type) {
     return
   }
 
-  ElMessage.info('测试通知功能开发中...')
-  // TODO: 实现测试通知功能
+  // SG-013: 调用后端测试通知 API
+  api.testNotification(type, webhook)
+    .then(() => {
+      ElMessage.success('测试通知已发送，请检查群消息')
+    })
+    .catch((error) => {
+      ElMessage.error('测试失败: ' + (error?.message || String(error)))
+    })
 }
 </script>
 

@@ -40,38 +40,20 @@ export const useTaskStore = defineStore('task', () => {
 
   // 创建任务
   async function createTask(task) {
-    try {
-      await api.createTask(task)
-      await loadTasks()
-      return true
-    } catch (error) {
-      console.error('创建任务失败:', error)
-      return false
-    }
+    await api.createTask(task)
+    await loadTasks()
   }
 
   // 更新任务
   async function updateTask(task) {
-    try {
-      await api.updateTask(task)
-      await loadTasks()
-      return true
-    } catch (error) {
-      console.error('更新任务失败:', error)
-      return false
-    }
+    await api.updateTask(task)
+    await loadTasks()
   }
 
   // 删除任务
   async function deleteTask(taskId) {
-    try {
-      await api.deleteTask(taskId)
-      await loadTasks()
-      return true
-    } catch (error) {
-      console.error('删除任务失败:', error)
-      return false
-    }
+    await api.deleteTask(taskId)
+    await loadTasks()
   }
 
   // 立即执行任务

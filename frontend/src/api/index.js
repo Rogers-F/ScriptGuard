@@ -13,7 +13,8 @@ const {
   GetConfig,
   GetAllConfig,
   UpdateConfig,
-  SelectScriptFile
+  SelectScriptFile,
+  TestNotification
 } = App
 
 // API 封装
@@ -70,6 +71,11 @@ export const api = {
   // 文件选择
   async selectScriptFile() {
     return await SelectScriptFile()
+  },
+
+  // SG-013: 测试通知
+  async testNotification(target, webhook) {
+    return await TestNotification(target, webhook)
   }
 }
 

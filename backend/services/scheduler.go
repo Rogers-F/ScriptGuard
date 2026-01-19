@@ -1,6 +1,8 @@
 package services
 
 import (
+	"log"
+	"scriptguard/backend/database"
 	"scriptguard/backend/models"
 	"sync"
 
@@ -16,8 +18,9 @@ type SchedulerService struct {
 }
 
 func NewSchedulerService(executor *ExecutorService, notifier *NotifierService) *SchedulerService {
+	// SG-007/SG-023: 使用北京时间（复用公共时区定义）
 	return &SchedulerService{
-		cron:     cron.New(cron.WithSeconds()),
+		cron:     cron.New(cron.WithSeconds(), cron.WithLocation(BeijingLocation)),
 		tasks:    make(map[string]cron.EntryID),
 		executor: executor,
 		notifier: notifier,
@@ -74,7 +77,21 @@ func (s *SchedulerService) UpdateTask(task *models.Task) error {
 
 // executeTask 执行任务
 func (s *SchedulerService) executeTask(task *models.Task) {
+	// SG-003: 并发限制，达到上限时跳过本次触发
+	if !s.executor.TryExecute() {
+		log.Printf("并发达到上限，跳过本次触发(task_id=%s, task_name=%s)", task.ID, task.Name)
+		// 写一条警告日志到数据库
+		s.executor.SaveInfoLog("", task.ID, "并发达到上限，跳过本次定时触发")
+		return
+	}
+	defer s.executor.ReleaseExecution()
+
 	execution, err := s.executor.ExecuteScript(task)
+
+	// 定时执行也写入执行历史，检查写库错误
+	if dbErr := database.GetDB().Create(execution).Error; dbErr != nil {
+		log.Printf("写入执行历史失败(task_id=%s, execution_id=%s): %v", task.ID, execution.ID, dbErr)
+	}
 
 	if err != nil && task.NotifyOnFailure {
 		s.notifier.NotifyFailure(task, execution, err)

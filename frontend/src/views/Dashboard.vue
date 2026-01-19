@@ -66,6 +66,8 @@
       <div class="chart-card">
         <div class="card-header">
           <h3>执行趋势（近7天）</h3>
+          <!-- SG-026: 标注示例数据 -->
+          <el-tag type="warning" size="small">示例数据</el-tag>
         </div>
         <v-chart :option="executionTrendOption" autoresize style="height: 300px" />
       </div>

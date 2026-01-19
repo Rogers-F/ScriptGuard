@@ -2,12 +2,37 @@ package backend
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"log"
 	"scriptguard/backend/database"
 	"scriptguard/backend/models"
 	"scriptguard/backend/services"
+	"strconv"
+	"strings"
+	"time"
 
+	"github.com/robfig/cron/v3"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"gorm.io/gorm"
 )
+
+// cronParser 用于校验 Cron 表达式
+var cronParser = cron.NewParser(
+	cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor,
+)
+
+// validateCronExpr 校验 Cron 表达式是否合法
+func validateCronExpr(expr string) error {
+	expr = strings.TrimSpace(expr)
+	if expr == "" {
+		return fmt.Errorf("Cron表达式不能为空")
+	}
+	if _, err := cronParser.Parse(expr); err != nil {
+		return fmt.Errorf("Cron表达式非法: %w", err)
+	}
+	return nil
+}
 
 type App struct {
 	ctx       context.Context
@@ -25,13 +50,32 @@ func NewApp() *App {
 func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	a.ctx = ctx
 
+	// SG-002: 使用用户数据目录
+	dbPath, err := database.GetDefaultDBPath()
+	if err != nil {
+		return fmt.Errorf("获取数据库路径失败: %w", err)
+	}
+
 	// 初始化数据库
-	database.InitDB("./database/scriptguard.db")
+	if err := database.InitDB(dbPath); err != nil {
+		return err
+	}
 
 	// 初始化服务
 	a.conda = services.NewCondaService()
 	a.executor = services.NewExecutorService()
 	a.notifier = services.NewNotifierService("", "")
+
+	// 启动时从配置表加载 webhook
+	if err := a.reloadNotifierConfig(); err != nil {
+		return err
+	}
+
+	// SG-019: 启动时加载并发配置
+	if err := a.reloadExecutorConfig(); err != nil {
+		return err
+	}
+
 	a.scheduler = services.NewSchedulerService(a.executor, a.notifier)
 	a.cleanup = services.NewCleanupService()
 
@@ -49,17 +93,80 @@ func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOpt
 }
 
 func (a *App) ServiceShutdown() error {
-	a.scheduler.Stop()
-	a.cleanup.Stop()
+	// SG-079: 增加 nil 保护
+	if a.scheduler != nil {
+		a.scheduler.Stop()
+	}
+	if a.cleanup != nil {
+		a.cleanup.Stop()
+	}
+	return database.CloseDB()
+}
+
+// reloadNotifierConfig 从配置表加载告警配置
+func (a *App) reloadNotifierConfig() error {
+	config, err := a.GetAllConfig()
+	if err != nil {
+		return err
+	}
+	a.notifier.SetWebhooks(
+		config[models.ConfigKeyDingTalkWebhook],
+		config[models.ConfigKeyWeComWebhook],
+	)
+	return nil
+}
+
+// SG-019: reloadExecutorConfig 从配置表加载执行器配置
+func (a *App) reloadExecutorConfig() error {
+	config, err := a.GetAllConfig()
+	if err != nil {
+		return err
+	}
+
+	// 加载最大并发数
+	if val, ok := config[models.ConfigKeyMaxConcurrency]; ok && val != "" {
+		if maxConcurrency, err := strconv.Atoi(val); err == nil && maxConcurrency > 0 {
+			a.executor.SetMaxConcurrency(maxConcurrency)
+			log.Printf("已加载最大并发配置: %d", maxConcurrency)
+		}
+	}
+
+	// 加载执行超时（单位：秒；0 表示不限制）
+	if val, ok := config[models.ConfigKeyExecutionTimeoutSeconds]; ok {
+		val = strings.TrimSpace(val)
+		if val != "" {
+			seconds, err := strconv.Atoi(val)
+			if err != nil {
+				log.Printf("加载执行超时配置失败(key=%s, value=%q): %v，使用默认值",
+					models.ConfigKeyExecutionTimeoutSeconds, val, err)
+			} else if seconds == 0 {
+				a.executor.SetTimeout(0)
+				log.Printf("已加载执行超时配置: 0（不限制）")
+			} else if seconds < 60 || seconds > 86400 {
+				log.Printf("加载执行超时配置失败(key=%s, value=%d): 超出允许范围(0 或 60~86400 秒)，使用默认值",
+					models.ConfigKeyExecutionTimeoutSeconds, seconds)
+			} else {
+				a.executor.SetTimeout(time.Duration(seconds) * time.Second)
+				log.Printf("已加载执行超时配置: %d 秒", seconds)
+			}
+		}
+	}
+
 	return nil
 }
 
 func (a *App) loadTasks() {
 	var tasks []models.Task
-	database.GetDB().Where("enabled = ?", true).Find(&tasks)
+	// SG-010: 检查 DB 错误
+	if err := database.GetDB().Where("enabled = ?", true).Find(&tasks).Error; err != nil {
+		log.Printf("加载任务失败: %v", err)
+		return
+	}
 
-	for _, task := range tasks {
-		a.scheduler.AddTask(&task)
+	for i := range tasks {
+		if err := a.scheduler.AddTask(&tasks[i]); err != nil {
+			log.Printf("添加任务到调度器失败(task_id=%s): %v", tasks[i].ID, err)
+		}
 	}
 }
 
@@ -77,42 +184,131 @@ func (a *App) GetTasks() ([]models.Task, error) {
 
 // CreateTask 创建任务
 func (a *App) CreateTask(task models.Task) error {
-	if err := database.GetDB().Create(&task).Error; err != nil {
+	// 先校验 Cron 表达式
+	if err := validateCronExpr(task.CronExpr); err != nil {
 		return err
 	}
-	return a.scheduler.AddTask(&task)
+
+	db := database.GetDB()
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	if err := tx.Create(&task).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := a.scheduler.AddTask(&task); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		// DB 没提交成功，内存调度必须清理
+		a.scheduler.RemoveTask(task.ID)
+		return err
+	}
+
+	return nil
 }
 
 // UpdateTask 更新任务
 func (a *App) UpdateTask(task models.Task) error {
-	if err := database.GetDB().Save(&task).Error; err != nil {
+	// 先校验 Cron 表达式
+	if err := validateCronExpr(task.CronExpr); err != nil {
 		return err
 	}
-	return a.scheduler.UpdateTask(&task)
+
+	db := database.GetDB()
+
+	// 读取旧任务，用于失败时恢复调度
+	var old models.Task
+	if err := db.First(&old, "id = ?", task.ID).Error; err != nil {
+		return err
+	}
+
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	if err := tx.Save(&task).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := a.scheduler.UpdateTask(&task); err != nil {
+		tx.Rollback()
+		// 尝试恢复旧调度
+		_ = a.scheduler.UpdateTask(&old)
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		// DB 没提交成功，调度需要回退到旧配置
+		_ = a.scheduler.UpdateTask(&old)
+		return err
+	}
+
+	return nil
 }
 
 // DeleteTask 删除任务
 func (a *App) DeleteTask(taskID string) error {
+	// SG-009: 先读取任务，删除失败时可恢复调度
+	var task models.Task
+	if err := database.GetDB().First(&task, "id = ?", taskID).Error; err != nil {
+		return err
+	}
+
 	a.scheduler.RemoveTask(taskID)
-	return database.GetDB().Delete(&models.Task{}, "id = ?", taskID).Error
+	if err := database.GetDB().Delete(&models.Task{}, "id = ?", taskID).Error; err != nil {
+		// 删除失败，恢复调度
+		_ = a.scheduler.AddTask(&task)
+		return err
+	}
+	return nil
 }
 
 // ExecuteTaskNow 立即执行任务
 func (a *App) ExecuteTaskNow(taskID string) (*models.Execution, error) {
+	// SG-020: 立即执行也需要检查并发限制
+	if !a.executor.TryExecute() {
+		return nil, fmt.Errorf("当前并发任务数已达上限，请稍后重试")
+	}
+	defer a.executor.ReleaseExecution()
+
 	var task models.Task
 	if err := database.GetDB().First(&task, "id = ?", taskID).Error; err != nil {
 		return nil, err
 	}
 
 	execution, err := a.executor.ExecuteScript(&task)
-	if err == nil {
-		database.GetDB().Create(execution)
+
+	// 无论成功失败都记录执行历史，并检查写库错误
+	if dbErr := database.GetDB().Create(execution).Error; dbErr != nil {
+		if err == nil {
+			// 脚本执行成功，但历史写入失败
+			err = fmt.Errorf("脚本执行成功，但写入执行历史失败: %w", dbErr)
+		} else {
+			// 脚本失败 + 写库也失败
+			err = fmt.Errorf("%w; 写入执行历史失败: %v", err, dbErr)
+		}
 	}
+
 	return execution, err
 }
 
 // GetExecutions 获取执行历史
 func (a *App) GetExecutions(taskID string, limit int) ([]models.Execution, error) {
+	// SG-018: 服务端上限保护
+	const maxLimit = 5000
+	if limit <= 0 || limit > maxLimit {
+		limit = maxLimit
+	}
+
 	var executions []models.Execution
 	query := database.GetDB().Order("start_time DESC")
 
@@ -120,9 +316,7 @@ func (a *App) GetExecutions(taskID string, limit int) ([]models.Execution, error
 		query = query.Where("task_id = ?", taskID)
 	}
 
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
+	query = query.Limit(limit)
 
 	err := query.Find(&executions).Error
 	return executions, err
@@ -130,21 +324,30 @@ func (a *App) GetExecutions(taskID string, limit int) ([]models.Execution, error
 
 // GetLogs 获取日志
 func (a *App) GetLogs(executionID string, taskID string, limit int) ([]models.Log, error) {
-	var logs []models.Log
-	query := database.GetDB().Order("timestamp ASC")
+	// SG-018: 服务端上限保护
+	const maxLimit = 5000
+	if limit <= 0 || limit > maxLimit {
+		limit = maxLimit
+	}
 
+	var logs []models.Log
+
+	query := database.GetDB()
 	if executionID != "" {
 		query = query.Where("execution_id = ?", executionID)
 	} else if taskID != "" {
 		query = query.Where("task_id = ?", taskID)
 	}
 
-	if limit > 0 {
-		query = query.Limit(limit)
+	// 按时间倒序取最新 N 条，再在内存中反转成正序
+	if err := query.Order("timestamp DESC").Limit(limit).Find(&logs).Error; err != nil {
+		return nil, err
 	}
-
-	err := query.Find(&logs).Error
-	return logs, err
+	// 反转切片：让返回结果按时间 ASC
+	for i, j := 0, len(logs)-1; i < j; i, j = i+1, j-1 {
+		logs[i], logs[j] = logs[j], logs[i]
+	}
+	return logs, nil
 }
 
 // startLogStreaming 启动日志流转发
@@ -186,21 +389,66 @@ func (a *App) GetAllConfig() (map[string]string, error) {
 
 // UpdateConfig 更新配置
 func (a *App) UpdateConfig(key, value string) error {
+	value = strings.TrimSpace(value)
+
+	// 执行超时（秒）参数校验：0 表示不限制；允许范围 0 或 60~86400
+	if key == models.ConfigKeyExecutionTimeoutSeconds {
+		seconds, err := strconv.Atoi(value)
+		if err != nil {
+			return fmt.Errorf("%s 必须为整数秒: %w", models.ConfigKeyExecutionTimeoutSeconds, err)
+		}
+		if seconds != 0 && (seconds < 60 || seconds > 86400) {
+			return fmt.Errorf("%s 超出允许范围：0 或 60~86400（单位：秒）", models.ConfigKeyExecutionTimeoutSeconds)
+		}
+	}
+
 	var config models.Config
 	err := database.GetDB().Where("key = ?", key).First(&config).Error
 
 	if err != nil {
-		// 配置不存在，创建新配置
-		config = models.Config{
-			Key:   key,
-			Value: value,
+		// SG-008: 仅 ErrRecordNotFound 时创建，其他错误返回
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			config = models.Config{
+				Key:   key,
+				Value: value,
+			}
+			if err := database.GetDB().Create(&config).Error; err != nil {
+				return err
+			}
+		} else {
+			return err
 		}
-		return database.GetDB().Create(&config).Error
+	} else {
+		// 更新现有配置
+		config.Value = value
+		if err := database.GetDB().Save(&config).Error; err != nil {
+			return err
+		}
 	}
 
-	// 更新现有配置
-	config.Value = value
-	return database.GetDB().Save(&config).Error
+	// 热更新告警配置
+	if key == models.ConfigKeyDingTalkWebhook || key == models.ConfigKeyWeComWebhook {
+		if err := a.reloadNotifierConfig(); err != nil {
+			return err
+		}
+	}
+
+	// SG-019: 热更新并发配置
+	if key == models.ConfigKeyMaxConcurrency {
+		if maxConcurrency, err := strconv.Atoi(value); err == nil && maxConcurrency > 0 {
+			a.executor.SetMaxConcurrency(maxConcurrency)
+			log.Printf("已热更新最大并发配置: %d", maxConcurrency)
+		}
+	}
+
+	// 热更新执行超时配置
+	if key == models.ConfigKeyExecutionTimeoutSeconds {
+		seconds, _ := strconv.Atoi(value) // 已校验
+		a.executor.SetTimeout(time.Duration(seconds) * time.Second)
+		log.Printf("已热更新执行超时配置: %d 秒", seconds)
+	}
+
+	return nil
 }
 
 // SelectScriptFile 打开文件选择对话框选择Python脚本
@@ -215,4 +463,9 @@ func (a *App) SelectScriptFile() (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+// SG-013: TestNotification 测试通知
+func (a *App) TestNotification(target string, webhook string) error {
+	return a.notifier.SendTest(target, webhook)
 }

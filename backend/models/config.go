@@ -14,8 +14,9 @@ type Config struct {
 
 // 配置键常量
 const (
-	ConfigKeyDingTalkWebhook  = "dingtalk_webhook"
-	ConfigKeyWeComWebhook     = "wecom_webhook"
-	ConfigKeyLogRetentionDays = "log_retention_days"
-	ConfigKeyMaxConcurrency   = "max_concurrency"
+	ConfigKeyDingTalkWebhook         = "dingtalk_webhook"
+	ConfigKeyWeComWebhook            = "wecom_webhook"
+	ConfigKeyLogRetentionDays        = "log_retention_days"
+	ConfigKeyMaxConcurrency          = "max_concurrency"
+	ConfigKeyExecutionTimeoutSeconds = "execution_timeout_seconds"
 )
