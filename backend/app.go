@@ -476,9 +476,14 @@ func (a *App) TestNotification(target string, webhook string) error {
 func (a *App) ExportDebugLogs(frontendLogs string) (string, error) {
 	// 打开保存文件对话框
 	dialog := application.SaveFileDialog()
-	dialog.SetTitle("导出调试日志")
+
+	// Wails v3 alpha.41: SaveFileDialogStruct 没有 SetTitle，需要通过 SetOptions 设置
+	dialog.SetOptions(&application.SaveFileDialogOptions{
+		Title:                "导出调试日志",
+		CanCreateDirectories: true,
+		Filename:             "ScriptGuard_debug_" + time.Now().Format("20060102_150405") + ".txt",
+	})
 	dialog.AddFilter("文本文件", "*.txt")
-	dialog.SetFilename("ScriptGuard_debug_" + time.Now().Format("20060102_150405") + ".txt")
 
 	path, err := dialog.PromptForSingleSelection()
 	if err != nil {
@@ -496,7 +501,7 @@ func (a *App) ExportDebugLogs(frontendLogs string) (string, error) {
 	content.WriteString("ScriptGuard 调试日志导出\n")
 	content.WriteString("========================================\n")
 	content.WriteString(fmt.Sprintf("导出时间: %s\n", time.Now().Format("2006-01-02 15:04:05")))
-	content.WriteString(fmt.Sprintf("应用版本: %s\n", "1.1.2"))
+	content.WriteString(fmt.Sprintf("应用版本: %s\n", "1.2.0"))
 	content.WriteString("\n")
 
 	// 写入系统信息
@@ -514,18 +519,18 @@ func (a *App) ExportDebugLogs(frontendLogs string) (string, error) {
 
 	// 从数据库获取最近的任务执行日志（最近500条）
 	var logs []models.Log
-	a.db.Order("timestamp DESC").Limit(500).Find(&logs)
+	database.GetDB().Order("timestamp DESC").Limit(500).Find(&logs)
 
 	content.WriteString("--- 任务执行日志（最近500条）---\n")
 	if len(logs) == 0 {
 		content.WriteString("暂无日志\n")
 	} else {
 		for i := len(logs) - 1; i >= 0; i-- { // 倒序输出，最早的在前
-			log := logs[i]
+			logEntry := logs[i]
 			content.WriteString(fmt.Sprintf("[%s] [%s] %s\n",
-				log.Timestamp.Format("2006-01-02 15:04:05"),
-				strings.ToUpper(log.Level),
-				log.Content,
+				logEntry.Timestamp.Format("2006-01-02 15:04:05"),
+				strings.ToUpper(string(logEntry.Level)),
+				logEntry.Content,
 			))
 		}
 	}
