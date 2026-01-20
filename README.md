@@ -2,10 +2,10 @@
 
 <div align="center">
 
-![ScriptGuard Logo](https://img.shields.io/badge/ScriptGuard-v0.1.0-6366f1?style=for-the-badge)
+![ScriptGuard Logo](https://img.shields.io/badge/ScriptGuard-v1.3.0-d97706?style=for-the-badge)
 ![Build Status](https://img.shields.io/github/actions/workflow/status/Rogers-F/ScriptGuard/build.yml?style=for-the-badge)
 ![Wails](https://img.shields.io/badge/Wails-3.0-00ADD8?style=for-the-badge&logo=go)
-![Vue](https://img.shields.io/badge/Vue-3.4-4FC08D?style=for-the-badge&logo=vue.js)
+![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?style=for-the-badge&logo=vue.js)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 一个强大、美观、易用的Python脚本定时执行与监控系统
@@ -36,7 +36,7 @@
   支持钉钉/企业微信机器人，任务失败自动推送
 
 - **现代化UI**
-  深色主题，渐变配色，流畅动画，响应式布局
+  温暖纸张风格，玻璃拟态设计，流畅动画，响应式布局
 
 ### 💎 技术亮点
 
