@@ -346,8 +346,9 @@ async function selectScriptFile() {
       taskForm.script_path = selectedPath
     }
   } catch (error) {
-    // 如果文件选择功能未实现，提示用户手动输入
-    ElMessage.info('请手动输入脚本路径')
+    console.error('选择脚本文件失败:', error)
+    // 显示真实错误信息，同时提示用户可以手动输入
+    ElMessage.warning(`选择文件失败: ${error.message || '未知错误'}，请手动输入脚本路径`)
   }
 }
 </script>

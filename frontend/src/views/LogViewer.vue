@@ -55,7 +55,17 @@
           <span class="log-content">{{ log.content }}</span>
         </div>
 
-        <div v-if="filteredLogs.length === 0" class="empty-state">
+        <!-- 错误状态 -->
+        <div v-if="loadError" class="error-state">
+          <el-icon :size="64" color="#ef4444"><WarningFilled /></el-icon>
+          <p>{{ loadError }}</p>
+          <el-button type="primary" @click="retryLoad">重试</el-button>
+          <p class="retry-info" v-if="failureCount > 0">
+            已失败 {{ failureCount }} 次，下次重试间隔 {{ Math.round(getPollingInterval() / 1000) }} 秒
+          </p>
+        </div>
+
+        <div v-else-if="filteredLogs.length === 0" class="empty-state">
           <el-icon :size="64"><Document /></el-icon>
           <p>暂无日志</p>
         </div>
@@ -67,7 +77,7 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Search, VideoPlay, VideoPause, Delete, Document } from '@element-plus/icons-vue'
+import { Search, VideoPlay, VideoPause, Delete, Document, WarningFilled } from '@element-plus/icons-vue'
 import { useTaskStore } from '@/stores/task'
 import api from '@/api'
 
@@ -82,6 +92,10 @@ const logs = ref([])
 const terminalRef = ref(null)
 const logBodyRef = ref(null)
 const isLoading = ref(false)
+const loadError = ref(null)
+const failureCount = ref(0)
+const maxRetryInterval = 30000 // 最大退避间隔 30 秒
+const baseInterval = 2000 // 基础轮询间隔 2 秒
 
 const filteredLogs = computed(() => {
   let result = logs.value
@@ -130,15 +144,54 @@ async function loadLogs() {
       ? await api.getLogs(selectedExecution.value, '', 1000)
       : await api.getLogs('', selectedTask.value, 1000)
     logs.value = result || []
+    // 成功后重置错误状态和失败计数
+    loadError.value = null
+    failureCount.value = 0
   } catch (error) {
     console.error('加载日志失败:', error)
+    loadError.value = error.message || '加载失败'
+    failureCount.value++
   } finally {
     isLoading.value = false
   }
 }
 
-// 日志轮询
-let logInterval = null
+// 计算退避后的轮询间隔
+function getPollingInterval() {
+  if (failureCount.value === 0) return baseInterval
+  // 指数退避：2^failureCount * baseInterval，最大 maxRetryInterval
+  return Math.min(Math.pow(2, failureCount.value) * baseInterval, maxRetryInterval)
+}
+
+// 手动重试
+function retryLoad() {
+  failureCount.value = 0
+  loadError.value = null
+  loadLogs()
+}
+
+// 日志轮询（使用 setTimeout 实现动态间隔）
+let pollingTimer = null
+
+function startPolling() {
+  stopPolling()
+  scheduleNextPoll()
+}
+
+function stopPolling() {
+  if (pollingTimer) {
+    clearTimeout(pollingTimer)
+    pollingTimer = null
+  }
+}
+
+function scheduleNextPoll() {
+  const interval = getPollingInterval()
+  pollingTimer = setTimeout(async () => {
+    await loadLogs()
+    scheduleNextPoll() // 递归调度下一次轮询
+  }, interval)
+}
 
 onMounted(async () => {
   // 解析 URL query 参数（从执行历史页跳转过来时带 execution 参数）
@@ -149,16 +202,12 @@ onMounted(async () => {
   await taskStore.loadTasks()
   await loadLogs()
 
-  // 每2秒轮询一次新日志
-  logInterval = setInterval(async () => {
-    await loadLogs()
-  }, 2000)
+  // 启动带退避机制的轮询
+  startPolling()
 })
 
 onUnmounted(() => {
-  if (logInterval) {
-    clearInterval(logInterval)
-  }
+  stopPolling()
 })
 
 // 监听选中任务变化，重新加载日志
@@ -278,7 +327,8 @@ watch(selectedTask, () => {
         }
       }
 
-      .empty-state {
+      .empty-state,
+      .error-state {
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -289,6 +339,20 @@ watch(selectedTask, () => {
         p {
           margin-top: 16px;
           font-size: 16px;
+        }
+      }
+
+      .error-state {
+        color: #ef4444;
+
+        .el-button {
+          margin-top: 16px;
+        }
+
+        .retry-info {
+          margin-top: 8px;
+          font-size: 12px;
+          color: #94a3b8;
         }
       }
     }

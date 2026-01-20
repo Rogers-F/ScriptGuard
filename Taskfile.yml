@@ -18,7 +18,6 @@ tasks:
     cmds:
       - wails3 generate bindings
 
-
   build:frontend:
     desc: Build frontend assets
     dir: frontend
@@ -37,6 +36,7 @@ tasks:
   dev:
     desc: Run in development mode
     deps:
+      - generate
       - dev:frontend
     cmds:
       - go run .
