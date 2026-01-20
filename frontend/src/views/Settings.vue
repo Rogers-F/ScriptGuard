@@ -32,6 +32,17 @@
                 </el-radio-group>
               </div>
             </div>
+
+            <div class="form-group">
+              <h3>{{ t.settings.general.tray }}</h3>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <span class="setting-label">{{ t.settings.general.closeToTray }}</span>
+                  <span class="setting-desc">{{ t.settings.general.closeToTrayDesc }}</span>
+                </div>
+                <el-switch v-model="generalForm.close_to_tray" @change="saveCloseToTray" />
+              </div>
+            </div>
           </div>
         </el-tab-pane>
 
@@ -163,6 +174,7 @@ const selectedLanguage = ref(langStore.currentLang)
 
 const notificationForm = reactive({ dingtalk_enabled: false, dingtalk_webhook: '', wecom_enabled: false, wecom_webhook: '' })
 const systemForm = reactive({ log_retention_days: 30, max_concurrency: 5, execution_timeout_seconds: 3600 })
+const generalForm = reactive({ close_to_tray: true })
 
 onMounted(async () => {
   await loadSettings()
@@ -184,7 +196,14 @@ async function loadSettings() {
     systemForm.log_retention_days = parseInt(config.log_retention_days) || 30
     systemForm.max_concurrency = parseInt(config.max_concurrency) || 5
     systemForm.execution_timeout_seconds = parseInt(config.execution_timeout_seconds) || 3600
+    generalForm.close_to_tray = config.close_to_tray !== 'false' // 默认 true
   } catch (err) { ElMessage.error(t.value.settings.loadFailed) }
+}
+
+async function saveCloseToTray(val) {
+  try {
+    await api.updateConfig('close_to_tray', val ? 'true' : 'false')
+  } catch (err) { ElMessage.error(err.message) }
 }
 
 async function loadEnvironments() {
@@ -304,6 +323,31 @@ function testNotification(type) {
                 border-radius: 20px; font-size: 12px; margin: 12px 0;
             }
             .desc { color: var(--text-secondary); }
+        }
+
+        .setting-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px;
+          background: var(--bg-hover);
+          border-radius: 8px;
+
+          .setting-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+
+            .setting-label {
+              font-weight: 500;
+              color: var(--text-primary);
+            }
+
+            .setting-desc {
+              font-size: 13px;
+              color: var(--text-tertiary);
+            }
+          }
         }
     }
 

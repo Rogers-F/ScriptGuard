@@ -139,7 +139,10 @@ const messages = {
         language: '界面语言',
         languageDesc: '选择应用程序显示语言',
         chinese: '简体中文',
-        english: 'English'
+        english: 'English',
+        tray: '系统托盘',
+        closeToTray: '关闭时最小化到托盘',
+        closeToTrayDesc: '点击关闭按钮时隐藏窗口而非退出程序'
       },
 
       // 告警通知
@@ -315,7 +318,10 @@ const messages = {
         language: 'Language',
         languageDesc: 'Select display language',
         chinese: '简体中文',
-        english: 'English'
+        english: 'English',
+        tray: 'System Tray',
+        closeToTray: 'Minimize to tray on close',
+        closeToTrayDesc: 'Hide window instead of quitting when clicking close button'
       },
 
       alerts: {
