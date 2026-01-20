@@ -147,10 +147,12 @@ h1, h2, h3, h4, h5, h6 {
   &--primary {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
+    color: #ffffff;
     box-shadow: 0 2px 4px rgba(217, 119, 6, 0.15);
 
     &:hover {
       background-color: var(--color-primary-hover);
+      color: #ffffff;
       transform: translateY(-1px);
     }
   }
