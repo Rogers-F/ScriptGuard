@@ -57,7 +57,7 @@
           </div>
           <div class="info-row">
              <span class="label">{{ t.tasks.schedule }}</span>
-             <span class="value font-mono">{{ task.cron_expr || t.tasks.manualOnly }}</span>
+             <span class="value" :title="getScheduleTooltip(task)">{{ formatScheduleText(task) }}</span>
           </div>
           <div class="script-path" :title="task.script_path">
              <el-icon><Folder /></el-icon>
@@ -125,8 +125,8 @@
           </el-input>
         </el-form-item>
 
-        <el-form-item :label="t.tasks.schedule" prop="cron_expr">
-          <CronEditor v-model="taskForm.cron_expr" />
+        <el-form-item :label="t.tasks.schedule" prop="cron_exprs">
+          <CronEditor v-model="taskForm.cron_exprs" />
         </el-form-item>
 
         <div class="form-switches">
@@ -175,7 +175,8 @@ const taskForm = reactive({
   name: '',
   script_path: '',
   conda_env: '',
-  cron_expr: '',
+  cron_expr: '',       // 兼容字段
+  cron_exprs: [],      // 新字段：Cron 数组
   enabled: true,
   notify_on_failure: true
 })
@@ -184,7 +185,14 @@ const taskRules = computed(() => ({
   name: [{ required: true, message: langStore.isChinese ? '请输入任务名称' : 'Task name is required', trigger: 'blur' }],
   script_path: [{ required: true, message: langStore.isChinese ? '请选择脚本文件' : 'Script file is required', trigger: 'blur' }],
   conda_env: [{ required: true, message: langStore.isChinese ? '请选择执行环境' : 'Environment is required', trigger: 'change' }],
-  cron_expr: [{ required: true, message: langStore.isChinese ? '请配置执行计划' : 'Schedule is required', trigger: 'change' }]
+  cron_exprs: [{
+    validator: (_, val, cb) => {
+      if (!Array.isArray(val) || val.length === 0) return cb(new Error(langStore.isChinese ? '请配置执行计划' : 'Schedule is required'))
+      if (val.length > 60) return cb(new Error(langStore.isChinese ? '最多支持 60 个时间点' : 'Up to 60 time points'))
+      cb()
+    },
+    trigger: 'change'
+  }]
 }))
 
 onMounted(async () => {
@@ -195,6 +203,82 @@ onMounted(async () => {
 function getFileName(path) {
   if (!path) return langStore.isChinese ? '未选择文件' : 'No file selected';
   return path.split(/[\\/]/).pop();
+}
+
+// 归一化任务的 cron 表达式
+function normalizeExprs(task) {
+  if (Array.isArray(task.cron_exprs) && task.cron_exprs.length) return task.cron_exprs
+  if (task.cron_expr) return [task.cron_expr]
+  return []
+}
+
+// 从 cron 表达式提取时间
+function extractTimeFromCron(expr) {
+  const reDaily = /^(\d{1,2}) (\d{1,2}) (\d{1,2}) \* \* \*$/
+  const reWeekly = /^(\d{1,2}) (\d{1,2}) (\d{1,2}) \* \* ([0-6](?:,[0-6])*)$/
+  const reMonthly = /^(\d{1,2}) (\d{1,2}) (\d{1,2}) (\d{1,2}) \* \*$/
+
+  let m = expr.match(reDaily) || expr.match(reWeekly) || expr.match(reMonthly)
+  if (m) {
+    const h = String(parseInt(m[3], 10)).padStart(2, '0')
+    const min = String(parseInt(m[2], 10)).padStart(2, '0')
+    const s = String(parseInt(m[1], 10)).padStart(2, '0')
+    return `${h}:${min}:${s}`
+  }
+  return null
+}
+
+// 格式化任务调度文本（用于卡片显示）
+function formatScheduleText(task) {
+  const exprs = normalizeExprs(task)
+  if (!exprs.length) return t.value.tasks.manualOnly
+
+  // interval（单条）
+  if (exprs.length === 1) {
+    let m = exprs[0].match(/^0 \*\/(\d+) \* \* \* \*$/)
+    if (m) return langStore.isChinese ? `每 ${m[1]} 分钟` : `Every ${m[1]} min`
+    m = exprs[0].match(/^0 0 \*\/(\d+) \* \* \*$/)
+    if (m) return langStore.isChinese ? `每 ${m[1]} 小时` : `Every ${m[1]} hr`
+    m = exprs[0].match(/^0 0 0 \*\/(\d+) \* \*$/)
+    if (m) return langStore.isChinese ? `每 ${m[1]} 天` : `Every ${m[1]} day`
+  }
+
+  // 提取时间点
+  const times = exprs.map(e => extractTimeFromCron(e)).filter(Boolean)
+  if (times.length === 0) return exprs[0] // 兜底
+
+  const timesStr = times.slice(0, 3).join(langStore.isChinese ? '、' : ', ')
+  const suffix = times.length > 3 ? (langStore.isChinese ? ` 等${times.length}个` : ` +${times.length - 3}`) : ''
+
+  // 检测是 weekly 还是 monthly 还是 daily
+  const reWeekly = /^(\d{1,2}) (\d{1,2}) (\d{1,2}) \* \* ([0-6](?:,[0-6])*)$/
+  const reMonthly = /^(\d{1,2}) (\d{1,2}) (\d{1,2}) (\d{1,2}) \* \*$/
+
+  const weeklyMatch = exprs[0].match(reWeekly)
+  if (weeklyMatch) {
+    const weekdayNames = langStore.isChinese
+      ? ['日', '一', '二', '三', '四', '五', '六']
+      : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const days = weeklyMatch[4].split(',').map(d => weekdayNames[parseInt(d, 10)]).join(langStore.isChinese ? '、' : ', ')
+    return langStore.isChinese ? `每周${days} ${timesStr}${suffix}` : `Weekly ${days} ${timesStr}${suffix}`
+  }
+
+  const monthlyMatch = exprs[0].match(reMonthly)
+  if (monthlyMatch) {
+    const day = parseInt(monthlyMatch[4], 10)
+    return langStore.isChinese ? `每月${day}号 ${timesStr}${suffix}` : `Monthly day ${day} ${timesStr}${suffix}`
+  }
+
+  return langStore.isChinese ? `每天 ${timesStr}${suffix}` : `Daily ${timesStr}${suffix}`
+}
+
+// 获取调度 tooltip（显示所有时间点）
+function getScheduleTooltip(task) {
+  const exprs = normalizeExprs(task)
+  if (exprs.length <= 1) return ''
+
+  const times = exprs.map(e => extractTimeFromCron(e)).filter(Boolean)
+  return times.join(', ')
 }
 
 function handleCommand(command, task) {
@@ -215,11 +299,17 @@ async function saveTask() {
     if (!valid) return
     saving.value = true
     try {
+      // 归一化：确保 cron_expr = cron_exprs[0]
+      const payload = {
+        ...taskForm,
+        cron_exprs: Array.isArray(taskForm.cron_exprs) ? taskForm.cron_exprs : [],
+        cron_expr: Array.isArray(taskForm.cron_exprs) && taskForm.cron_exprs.length > 0 ? taskForm.cron_exprs[0] : ''
+      }
       if (editingTask.value) {
-        await taskStore.updateTask({ ...editingTask.value, ...taskForm })
+        await taskStore.updateTask({ ...editingTask.value, ...payload })
         ElMessage.success(t.value.tasks.saveSuccess)
       } else {
-        await taskStore.createTask(taskForm)
+        await taskStore.createTask(payload)
         ElMessage.success(t.value.tasks.createSuccess)
       }
       showCreateDialog.value = false
@@ -233,7 +323,7 @@ async function saveTask() {
 }
 
 function resetForm() {
-  Object.assign(taskForm, { id: '', name: '', script_path: '', conda_env: '', cron_expr: '', enabled: true, notify_on_failure: true })
+  Object.assign(taskForm, { id: '', name: '', script_path: '', conda_env: '', cron_expr: '', cron_exprs: [], enabled: true, notify_on_failure: true })
   editingTask.value = null
   taskFormRef.value?.resetFields()
 }

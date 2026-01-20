@@ -24,7 +24,7 @@ var cronParser = cron.NewParser(
 	cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor,
 )
 
-// validateCronExpr 校验 Cron 表达式是否合法
+// validateCronExpr 校验单个 Cron 表达式是否合法
 func validateCronExpr(expr string) error {
 	expr = strings.TrimSpace(expr)
 	if expr == "" {
@@ -32,6 +32,28 @@ func validateCronExpr(expr string) error {
 	}
 	if _, err := cronParser.Parse(expr); err != nil {
 		return fmt.Errorf("Cron表达式非法: %w", err)
+	}
+	return nil
+}
+
+// validateCronExprs 校验多个 Cron 表达式（支持最多60个时间点）
+func validateCronExprs(exprs []string) error {
+	if len(exprs) == 0 {
+		return fmt.Errorf("Cron表达式不能为空")
+	}
+	if len(exprs) > 60 {
+		return fmt.Errorf("最多支持 60 个时间点")
+	}
+	seen := make(map[string]struct{}, len(exprs))
+	for _, expr := range exprs {
+		expr = strings.TrimSpace(expr)
+		if err := validateCronExpr(expr); err != nil {
+			return err
+		}
+		if _, ok := seen[expr]; ok {
+			return fmt.Errorf("存在重复的时间点: %s", expr)
+		}
+		seen[expr] = struct{}{}
 	}
 	return nil
 }
@@ -180,46 +202,49 @@ func (a *App) GetEnvironments() ([]models.Environment, error) {
 // GetTasks 获取所有任务
 func (a *App) GetTasks() ([]models.Task, error) {
 	var tasks []models.Task
-	err := database.GetDB().Find(&tasks).Error
-	return tasks, err
+	if err := database.GetDB().Find(&tasks).Error; err != nil {
+		return nil, err
+	}
+	// 归一化 cron 表达式，保证前端拿到稳定的 cron_exprs
+	for i := range tasks {
+		tasks[i].NormalizeCron()
+	}
+	return tasks, nil
 }
 
 // CreateTask 创建任务
+// SG-024: 先写库成功，再加调度（避免 Commit 失败时调度已触发执行）
 func (a *App) CreateTask(task models.Task) error {
-	// 先校验 Cron 表达式
-	if err := validateCronExpr(task.CronExpr); err != nil {
+	// 归一化并校验 Cron 表达式
+	task.NormalizeCron()
+	if err := validateCronExprs(task.CronExprs); err != nil {
 		return err
 	}
 
 	db := database.GetDB()
-	tx := db.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
 
-	if err := tx.Create(&task).Error; err != nil {
-		tx.Rollback()
+	// 先写库
+	if err := db.Create(&task).Error; err != nil {
 		return err
 	}
 
+	// DB 写入成功后，再加调度
 	if err := a.scheduler.AddTask(&task); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		// DB 没提交成功，内存调度必须清理
-		a.scheduler.RemoveTask(task.ID)
-		return err
+		// 调度失败，补偿：禁用任务（保守策略，避免删除数据）
+		task.Enabled = false
+		_ = db.Save(&task)
+		return fmt.Errorf("任务已创建但调度失败，已自动禁用: %w", err)
 	}
 
 	return nil
 }
 
 // UpdateTask 更新任务
+// SG-024: 先停调度 → 写库 → 再恢复调度（与 DeleteTask 策略对齐）
 func (a *App) UpdateTask(task models.Task) error {
-	// 先校验 Cron 表达式
-	if err := validateCronExpr(task.CronExpr); err != nil {
+	// 归一化并校验 Cron 表达式
+	task.NormalizeCron()
+	if err := validateCronExprs(task.CronExprs); err != nil {
 		return err
 	}
 
@@ -231,27 +256,22 @@ func (a *App) UpdateTask(task models.Task) error {
 		return err
 	}
 
-	tx := db.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
+	// 1. 先停止旧调度（避免更新期间触发执行）
+	a.scheduler.RemoveTask(task.ID)
 
-	if err := tx.Save(&task).Error; err != nil {
-		tx.Rollback()
+	// 2. 写库
+	if err := db.Save(&task).Error; err != nil {
+		// 写库失败，恢复旧调度
+		_ = a.scheduler.AddTask(&old)
 		return err
 	}
 
-	if err := a.scheduler.UpdateTask(&task); err != nil {
-		tx.Rollback()
-		// 尝试恢复旧调度
-		_ = a.scheduler.UpdateTask(&old)
-		return err
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		// DB 没提交成功，调度需要回退到旧配置
-		_ = a.scheduler.UpdateTask(&old)
-		return err
+	// 3. 添加新调度
+	if err := a.scheduler.AddTask(&task); err != nil {
+		// 调度失败，恢复旧数据和旧调度
+		_ = db.Save(&old)
+		_ = a.scheduler.AddTask(&old)
+		return fmt.Errorf("任务已更新但调度失败: %w", err)
 	}
 
 	return nil

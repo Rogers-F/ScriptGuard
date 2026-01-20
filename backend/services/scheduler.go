@@ -11,7 +11,7 @@ import (
 
 type SchedulerService struct {
 	cron     *cron.Cron
-	tasks    map[string]cron.EntryID
+	tasks    map[string][]cron.EntryID // 支持一个任务多个时间点
 	executor *ExecutorService
 	notifier *NotifierService
 	mu       sync.RWMutex
@@ -21,7 +21,7 @@ func NewSchedulerService(executor *ExecutorService, notifier *NotifierService) *
 	// SG-007/SG-023: 使用北京时间（复用公共时区定义）
 	return &SchedulerService{
 		cron:     cron.New(cron.WithSeconds(), cron.WithLocation(BeijingLocation)),
-		tasks:    make(map[string]cron.EntryID),
+		tasks:    make(map[string][]cron.EntryID),
 		executor: executor,
 		notifier: notifier,
 	}
@@ -37,7 +37,7 @@ func (s *SchedulerService) Stop() {
 	s.cron.Stop()
 }
 
-// AddTask 添加任务
+// AddTask 添加任务（支持多个时间点）
 func (s *SchedulerService) AddTask(task *models.Task) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -46,25 +46,37 @@ func (s *SchedulerService) AddTask(task *models.Task) error {
 		return nil
 	}
 
-	entryID, err := s.cron.AddFunc(task.CronExpr, func() {
-		s.executeTask(task)
-	})
+	// 归一化 cron 表达式（兼容旧数据）
+	task.NormalizeCron()
 
-	if err != nil {
-		return err
+	entryIDs := make([]cron.EntryID, 0, len(task.CronExprs))
+	for _, expr := range task.CronExprs {
+		entryID, err := s.cron.AddFunc(expr, func() {
+			s.executeTask(task)
+		})
+		if err != nil {
+			// 回滚已添加的 entry
+			for _, id := range entryIDs {
+				s.cron.Remove(id)
+			}
+			return err
+		}
+		entryIDs = append(entryIDs, entryID)
 	}
 
-	s.tasks[task.ID] = entryID
+	s.tasks[task.ID] = entryIDs
 	return nil
 }
 
-// RemoveTask 移除任务
+// RemoveTask 移除任务（删除所有关联的时间点）
 func (s *SchedulerService) RemoveTask(taskID string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if entryID, exists := s.tasks[taskID]; exists {
-		s.cron.Remove(entryID)
+	if entryIDs, exists := s.tasks[taskID]; exists {
+		for _, id := range entryIDs {
+			s.cron.Remove(id)
+		}
 		delete(s.tasks, taskID)
 	}
 }
