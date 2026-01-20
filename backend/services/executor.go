@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"scriptguard/backend/database"
 	"scriptguard/backend/models"
@@ -90,6 +91,8 @@ func (s *ExecutorService) ExecuteScript(task *models.Task) (*models.Execution, e
 	}
 	defer cancel()
 
+	// SG-029: 设置 UTF-8 编码，修复 Windows conda 中文输出乱码问题
+	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
 	// SG-005: 检查 Pipe 错误

@@ -36,7 +36,7 @@ func main() {
 		},
 	})
 
-	mainWindow := app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	mainWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:  "ScriptGuard - 脚本守护者",
 		Width:  1400,
 		Height: 900,
@@ -50,8 +50,8 @@ func main() {
 		},
 		BackgroundColour: application.NewRGB(15, 23, 42),
 		URL:              "/",
-		KeyBindings: map[string]func(window *application.WebviewWindow){
-			"F12": func(window *application.WebviewWindow) {
+		KeyBindings: map[string]func(window application.Window){
+			"F12": func(window application.Window) {
 				window.OpenDevTools()
 			},
 		},
@@ -81,13 +81,13 @@ func main() {
 		e.Cancel() // 取消关闭，改为隐藏
 	})
 
-	// 创建系统托盘
-	systemTray := app.NewSystemTray()
+	// 创建系统托盘 (Wails v3 alpha.41 正确 API)
+	systemTray := app.SystemTray.New()
 	systemTray.SetIcon(appIcon)
 	systemTray.SetTooltip("ScriptGuard - 脚本守护者")
 
 	// 托盘右键菜单
-	trayMenu := app.NewMenu()
+	trayMenu := app.Menu.New()
 	trayMenu.Add("显示/隐藏窗口").OnClick(func(_ *application.Context) {
 		toggleWindow()
 	})
