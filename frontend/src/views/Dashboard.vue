@@ -2,8 +2,8 @@
   <div class="page-container dashboard">
     <div class="page-header">
       <div>
-        <h1>Dashboard</h1>
-        <p>System overview and performance metrics</p>
+        <h1>{{ t.dashboard.title }}</h1>
+        <p>{{ t.dashboard.subtitle }}</p>
       </div>
     </div>
 
@@ -11,47 +11,47 @@
     <div class="stats-grid">
       <div class="stat-card glass-panel">
         <div class="stat-header">
-           <span class="label">Total Tasks</span>
+           <span class="label">{{ t.dashboard.totalTasks }}</span>
            <el-icon><List /></el-icon>
         </div>
         <div class="stat-value font-serif">{{ stats.totalTasks }}</div>
         <div class="stat-footer">
-          <span class="text-primary">{{ stats.enabledTasks }}</span> active
+          <span class="text-primary">{{ stats.enabledTasks }}</span> {{ t.dashboard.active }}
         </div>
       </div>
 
       <div class="stat-card glass-panel">
         <div class="stat-header">
-           <span class="label">Success Today</span>
+           <span class="label">{{ t.dashboard.successToday }}</span>
            <el-icon class="text-success"><Check /></el-icon>
         </div>
         <div class="stat-value font-serif text-success">{{ stats.todaySuccess }}</div>
         <div class="stat-footer">
-          Rate: {{ stats.successRate }}%
+          {{ t.dashboard.rate }}: {{ stats.successRate }}%
         </div>
       </div>
 
       <div class="stat-card glass-panel">
         <div class="stat-header">
-           <span class="label">Failed Today</span>
+           <span class="label">{{ t.dashboard.failedToday }}</span>
            <el-icon class="text-danger"><Warning /></el-icon>
         </div>
         <div class="stat-value font-serif" :class="{ 'text-danger': stats.todayFailed > 0 }">
           {{ stats.todayFailed }}
         </div>
         <div class="stat-footer">
-          {{ stats.todayFailed > 0 ? 'Requires attention' : 'No issues' }}
+          {{ stats.todayFailed > 0 ? t.common.requiresAttention : t.common.noIssues }}
         </div>
       </div>
 
       <div class="stat-card glass-panel">
         <div class="stat-header">
-           <span class="label">Avg Duration</span>
+           <span class="label">{{ t.dashboard.avgDuration }}</span>
            <el-icon><Timer /></el-icon>
         </div>
         <div class="stat-value font-serif">{{ stats.avgDuration }}<span class="unit">s</span></div>
         <div class="stat-footer">
-          7-day average
+          {{ t.dashboard.sevenDayAvg }}
         </div>
       </div>
     </div>
@@ -60,14 +60,14 @@
     <div class="charts-section">
       <div class="card-panel chart-panel">
         <div class="panel-header">
-          <h3>Execution Trend</h3>
+          <h3>{{ t.dashboard.executionTrend }}</h3>
         </div>
         <v-chart :option="executionTrendOption" autoresize class="chart-container" />
       </div>
 
       <div class="card-panel chart-panel">
         <div class="panel-header">
-          <h3>Task Distribution</h3>
+          <h3>{{ t.dashboard.taskDistribution }}</h3>
         </div>
         <v-chart :option="taskStatusOption" autoresize class="chart-container" />
       </div>
@@ -76,9 +76,9 @@
     <!-- Recent Executions -->
     <div class="card-panel recent-section">
       <div class="panel-header">
-        <h3>Recent Activity</h3>
+        <h3>{{ t.dashboard.recentActivity }}</h3>
         <el-button link type="primary" @click="$router.push('/history')">
-          View All History
+          {{ t.dashboard.viewAllHistory }}
         </el-button>
       </div>
 
@@ -88,17 +88,17 @@
         :header-cell-style="{ background: 'transparent', color: '#78716c', fontFamily: 'var(--font-sans)' }"
         :row-style="{ background: 'transparent' }"
       >
-        <el-table-column prop="task_name" label="Task" min-width="180">
+        <el-table-column prop="task_name" :label="t.dashboard.task" min-width="180">
           <template #default="{ row }">
             <span class="font-medium text-primary">{{ getTaskName(row.task_id) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="start_time" label="Time" width="180">
+        <el-table-column prop="start_time" :label="t.dashboard.time" width="180">
           <template #default="{ row }">
             <span class="text-secondary">{{ formatTime(row.start_time) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="Status" width="120">
+        <el-table-column prop="status" :label="t.dashboard.status" width="120">
           <template #default="{ row }">
             <div class="status-cell">
                <div class="dot" :class="row.status"></div>
@@ -106,7 +106,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="duration_ms" label="Duration" width="120">
+        <el-table-column prop="duration_ms" :label="t.dashboard.duration" width="120">
           <template #default="{ row }">
             <span class="text-secondary font-mono">{{ (row.duration_ms / 1000).toFixed(2) }}s</span>
           </template>
@@ -125,10 +125,13 @@ import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/compon
 import VChart from 'vue-echarts'
 import { List, Check, Warning, Timer } from '@element-plus/icons-vue'
 import { useTaskStore } from '@/stores/task'
+import { useLanguageStore } from '@/stores/language'
 
 use([CanvasRenderer, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
 
 const taskStore = useTaskStore()
+const langStore = useLanguageStore()
+const t = computed(() => langStore.t)
 
 const stats = reactive({
   totalTasks: 0,
@@ -154,7 +157,7 @@ const executionTrendOption = computed(() => ({
   grid: { left: 10, right: 10, bottom: 0, top: 30, containLabel: true },
   xAxis: {
     type: 'category',
-    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    data: t.value.dashboard.weekdays,
     axisLine: { show: false },
     axisTick: { show: false },
     axisLabel: { color: '#a8a29e', fontFamily: 'Inter' }
@@ -166,7 +169,7 @@ const executionTrendOption = computed(() => ({
   },
   series: [
     {
-      name: 'Success',
+      name: t.value.common.success,
       type: 'line',
       data: [12, 15, 10, 18, 14, 16, 20],
       smooth: true,
@@ -176,7 +179,7 @@ const executionTrendOption = computed(() => ({
       itemStyle: { color: '#fff', borderWidth: 2, borderColor: '#059669' }
     },
     {
-      name: 'Failed',
+      name: t.value.common.failed,
       type: 'line',
       data: [2, 1, 3, 1, 2, 0, 1],
       smooth: true,
@@ -207,8 +210,8 @@ const taskStatusOption = computed(() => ({
       radius: ['60%', '80%'],
       center: ['50%', '45%'],
       data: [
-        { value: stats.enabledTasks, name: 'Active', itemStyle: { color: '#d97706' } },
-        { value: stats.totalTasks - stats.enabledTasks, name: 'Stopped', itemStyle: { color: '#e7e5e4' } }
+        { value: stats.enabledTasks, name: t.value.dashboard.active, itemStyle: { color: '#d97706' } },
+        { value: stats.totalTasks - stats.enabledTasks, name: t.value.dashboard.stopped, itemStyle: { color: '#e7e5e4' } }
       ],
       label: { show: false },
       itemStyle: { borderColor: '#f4f2ed', borderWidth: 2 }
@@ -248,7 +251,7 @@ async function loadDashboardData() {
 
 function getTaskName(taskId) {
   const task = taskStore.tasks.find(t => t.id === taskId)
-  return task ? task.name : 'Unknown'
+  return task ? task.name : t.value.common.unknown
 }
 
 function formatTime(time) {
@@ -256,7 +259,11 @@ function formatTime(time) {
 }
 
 function getStatusText(status) {
-  const map = { success: 'Success', failed: 'Failed', running: 'Running' }
+  const map = {
+    success: t.value.common.success,
+    failed: t.value.common.failed,
+    running: t.value.common.running
+  }
   return map[status] || status
 }
 </script>

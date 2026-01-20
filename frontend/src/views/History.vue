@@ -2,20 +2,20 @@
   <div class="page-container history-page">
     <div class="page-header">
       <div>
-        <h1>Execution History</h1>
-        <p>Audit trail of all task runs</p>
+        <h1>{{ t.history.title }}</h1>
+        <p>{{ t.history.subtitle }}</p>
       </div>
       <div class="header-right">
         <el-date-picker
           v-model="dateRange"
           type="daterange"
           range-separator="-"
-          start-placeholder="Start"
-          end-placeholder="End"
+          :start-placeholder="t.history.startDate"
+          :end-placeholder="t.history.endDate"
           style="width: 240px"
           @change="loadExecutions"
         />
-        <el-select v-model="selectedTask" placeholder="Filter Task" style="width: 180px" clearable @change="loadExecutions">
+        <el-select v-model="selectedTask" :placeholder="t.history.filterTask" style="width: 180px" clearable @change="loadExecutions">
           <el-option v-for="task in taskStore.tasks" :key="task.id" :label="task.name" :value="task.id" />
         </el-select>
       </div>
@@ -23,7 +23,7 @@
 
     <div class="card-panel timeline-section">
       <div class="panel-header">
-        <h3>Recent Activity</h3>
+        <h3>{{ t.history.recentActivity }}</h3>
         <el-button :icon="Refresh" circle size="small" @click="loadExecutions" />
       </div>
 
@@ -44,9 +44,9 @@
 
             <div class="item-status">
                <el-tag :type="getStatusType(exec.status)" size="small" effect="light">
-                  {{ exec.status.toUpperCase() }}
+                  {{ getStatusText(exec.status) }}
                </el-tag>
-               <span class="exit-code" v-if="exec.exit_code !== 0">Exit: {{ exec.exit_code }}</span>
+               <span class="exit-code" v-if="exec.exit_code !== 0">{{ t.history.exitCode }}: {{ exec.exit_code }}</span>
             </div>
 
             <div v-if="exec.error_message" class="error-msg">
@@ -54,25 +54,29 @@
             </div>
 
             <el-button size="small" link type="primary" class="view-log-btn" @click="viewLogs(exec.id)">
-               View Logs
+               {{ t.common.viewLogs }}
             </el-button>
           </div>
         </el-timeline-item>
       </el-timeline>
 
-      <el-empty v-else description="No records" />
+      <el-empty v-else :description="t.history.noRecords" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Refresh } from '@element-plus/icons-vue'
 import { useTaskStore } from '@/stores/task'
+import { useLanguageStore } from '@/stores/language'
 
 const router = useRouter()
 const taskStore = useTaskStore()
+const langStore = useLanguageStore()
+const t = computed(() => langStore.t)
+
 const selectedTask = ref('')
 const dateRange = ref([])
 const executions = ref([])
@@ -88,16 +92,40 @@ async function loadExecutions() {
   if (dateRange.value && dateRange.value.length === 2) {
     const startDate = new Date(dateRange.value[0]); startDate.setHours(0, 0, 0, 0)
     const endDate = new Date(dateRange.value[1]); endDate.setHours(23, 59, 59, 999)
-    result = result.filter(e => { const t = new Date(e.start_time); return t >= startDate && t <= endDate })
+    result = result.filter(e => { const dt = new Date(e.start_time); return dt >= startDate && dt <= endDate })
   }
   executions.value = result
 }
 
-function getTaskName(taskId) { const t = taskStore.tasks.find(x => x.id === taskId); return t ? t.name : 'Unknown' }
-function formatTime(time) { return new Date(time).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }
-function getStatusType(s) { return { success: 'success', failed: 'danger', running: 'warning' }[s] || 'info' }
-function getTimelineColor(s) { return { success: '#059669', failed: '#dc2626', running: '#d97706' }[s] || '#a8a29e' }
-function viewLogs(id) { router.push(`/logs?execution=${id}`) }
+function getTaskName(taskId) {
+  const task = taskStore.tasks.find(x => x.id === taskId)
+  return task ? task.name : t.value.common.unknown
+}
+
+function formatTime(time) {
+  return new Date(time).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function getStatusType(s) {
+  return { success: 'success', failed: 'danger', running: 'warning' }[s] || 'info'
+}
+
+function getTimelineColor(s) {
+  return { success: '#059669', failed: '#dc2626', running: '#d97706' }[s] || '#a8a29e'
+}
+
+function getStatusText(status) {
+  const map = {
+    success: t.value.common.success,
+    failed: t.value.common.failed,
+    running: t.value.common.running
+  }
+  return map[status] || status
+}
+
+function viewLogs(id) {
+  router.push(`/logs?execution=${id}`)
+}
 </script>
 
 <style lang="scss" scoped>

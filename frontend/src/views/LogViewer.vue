@@ -2,20 +2,20 @@
   <div class="page-container log-viewer-page">
     <div class="page-header compact">
       <div class="left">
-        <h1>Logs</h1>
+        <h1>{{ t.logs.title }}</h1>
       </div>
       <div class="controls glass-panel">
-        <el-select v-model="selectedTask" placeholder="All Tasks" size="default" clearable class="w-48">
+        <el-select v-model="selectedTask" :placeholder="t.logs.allTasks" size="default" clearable class="w-48">
           <el-option v-for="task in taskStore.tasks" :key="task.id" :label="task.name" :value="task.id" />
         </el-select>
-        <el-input v-model="searchText" placeholder="Search..." size="default" class="w-64" clearable>
+        <el-input v-model="searchText" :placeholder="t.common.search" size="default" class="w-64" clearable>
           <template #prefix><el-icon><Search /></el-icon></template>
         </el-input>
         <div class="divider"></div>
         <el-button size="default" :type="autoScroll ? 'primary' : 'default'" @click="autoScroll = !autoScroll">
-          {{ autoScroll ? 'Autoscroll On' : 'Autoscroll Off' }}
+          {{ autoScroll ? t.logs.autoscrollOn : t.logs.autoscrollOff }}
         </el-button>
-        <el-button size="default" @click="clearLogs">Clear</el-button>
+        <el-button size="default" @click="clearLogs">{{ t.logs.clear }}</el-button>
         <el-button size="default" @click="exportLogs" :loading="isExporting">
           <el-icon><Download /></el-icon>
         </el-button>
@@ -27,11 +27,11 @@
         <div v-if="loadError" class="empty-terminal error-state">
           <el-icon :size="48" color="#dc2626"><WarningFilled /></el-icon>
           <p>{{ loadError }}</p>
-          <el-button link type="primary" @click="retryLoad">Retry</el-button>
+          <el-button link type="primary" @click="retryLoad">{{ t.logs.retry }}</el-button>
         </div>
 
         <div v-else-if="filteredLogs.length === 0" class="empty-terminal">
-          <span>Waiting for logs...</span>
+          <span>{{ t.logs.waitingForLogs }}</span>
         </div>
 
         <div
@@ -56,10 +56,14 @@ import { useRoute } from 'vue-router'
 import { Search, WarningFilled, Download } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useTaskStore } from '@/stores/task'
+import { useLanguageStore } from '@/stores/language'
 import api from '@/api'
 
 const route = useRoute()
 const taskStore = useTaskStore()
+const langStore = useLanguageStore()
+const t = computed(() => langStore.t)
+
 const selectedTask = ref('')
 const selectedExecution = ref('')
 const searchText = ref('')
@@ -107,7 +111,7 @@ async function exportLogs() {
   isExporting.value = true
   try {
     const savedPath = await api.exportDebugLogs("")
-    if (savedPath) ElMessage.success(`Saved to ${savedPath}`)
+    if (savedPath) ElMessage.success(`${t.value.logs.savedTo} ${savedPath}`)
   } catch (error) { ElMessage.error(error.message) } finally { isExporting.value = false }
 }
 
@@ -184,9 +188,11 @@ watch(selectedTask, () => { selectedExecution.value = ''; loadLogs() })
     .empty-terminal {
       height: 100%;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       color: #525252;
+      gap: 12px;
     }
   }
 }

@@ -16,26 +16,26 @@
           :collapse-transition="false"
         >
           <div class="menu-section">
-            <div class="menu-label">Analytics</div>
+            <div class="menu-label">{{ t.menu.analytics }}</div>
             <el-menu-item index="/dashboard">
               <el-icon><DataAnalysis /></el-icon>
-              <span>Dashboard</span>
+              <span>{{ t.menu.dashboard }}</span>
             </el-menu-item>
             <el-menu-item index="/history">
               <el-icon><Clock /></el-icon>
-              <span>History</span>
+              <span>{{ t.menu.history }}</span>
             </el-menu-item>
           </div>
 
           <div class="menu-section">
-            <div class="menu-label">Automation</div>
+            <div class="menu-label">{{ t.menu.scheduling }}</div>
             <el-menu-item index="/tasks">
               <el-icon><List /></el-icon>
-              <span>Task List</span>
+              <span>{{ t.menu.tasks }}</span>
             </el-menu-item>
             <el-menu-item index="/logs">
               <el-icon><Document /></el-icon>
-              <span>Logs</span>
+              <span>{{ t.menu.logs }}</span>
             </el-menu-item>
           </div>
 
@@ -44,14 +44,14 @@
           <div class="menu-section">
             <el-menu-item index="/settings">
               <el-icon><Setting /></el-icon>
-              <span>Settings</span>
+              <span>{{ t.menu.settings }}</span>
             </el-menu-item>
           </div>
         </el-menu>
 
         <div class="sidebar-footer">
           <div class="user-card glass-panel">
-            <div class="avatar">Admin</div>
+            <div class="avatar">{{ langStore.isChinese ? '管理员' : 'Admin' }}</div>
             <div class="status-dot"></div>
           </div>
         </div>
@@ -69,7 +69,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { Monitor, DataAnalysis, List, Document, Clock, Setting } from '@element-plus/icons-vue'
+import { useLanguageStore } from '@/stores/language'
+
+const langStore = useLanguageStore()
+const t = computed(() => langStore.t)
 </script>
 
 <style lang="scss">
