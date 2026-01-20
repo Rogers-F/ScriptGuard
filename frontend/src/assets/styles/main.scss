@@ -1,100 +1,250 @@
-// Variables
+/* Import Google Fonts: Inter (Sans) for UI, Lora (Serif) for Headings to match Anthropic style */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+// -----------------------------------------------------------------------------
+// 1. Theme Variables (Anthropic Inspired: Warm, Paper, Earthy)
+// -----------------------------------------------------------------------------
 :root {
-  --bg-body: #0a0a0a;
-  --bg-secondary: #141414;
-  --bg-tertiary: #1f1f1f;
+  /* Base Backgrounds - The "Paper" Feel */
+  --bg-body: #f4f2ed;          /* Anthropic Warm Beige/Cream */
+  --bg-sidebar: rgba(240, 238, 233, 0.75); /* Translucent cream */
+  --bg-card: rgba(255, 255, 255, 0.65);    /* White glass on cream paper */
+  --bg-input: rgba(255, 255, 255, 0.5);
+  --bg-hover: rgba(0, 0, 0, 0.04);
 
-  --border-light: #27272a;
-  --border-hover: #3f3f46;
+  /* Brand Colors - Earthy Tones */
+  --color-primary: #d97706;       /* Warm Amber/Terracotta (Matches request) */
+  --color-primary-hover: #b45309; /* Darker Earthy Orange */
+  --color-primary-light: rgba(217, 119, 6, 0.08);
 
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #64748b;
+  --color-secondary: #2d2a26;     /* Warm Charcoal/Ink Black */
 
-  --text-primary: #e5e5e5;
-  --text-secondary: #a1a1aa;
-  --text-tertiary: #52525b;
+  /* Semantic Colors - Muted & Natural */
+  --color-success: #059669; /* Emerald */
+  --color-warning: #d97706; /* Amber */
+  --color-danger: #dc2626;  /* Brick Red */
+  --color-info: #78716c;    /* Stone Grey */
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Lora', 'Georgia', serif; /* Key for Anthropic feel */
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --text-primary: #1c1917;   /* Stone 900 - Ink Black */
+  --text-secondary: #44403c; /* Stone 700 - Dark Grey */
+  --text-tertiary: #a8a29e;  /* Stone 400 - Light Grey */
+
+  /* Borders */
+  --border-light: rgba(28, 25, 23, 0.08); /* Very subtle dark border */
+  --border-hover: rgba(28, 25, 23, 0.15);
+
+  /* Shadows - Soft & Diffused */
+  --shadow-sm: 0 1px 2px 0 rgba(28, 25, 23, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(28, 25, 23, 0.05), 0 2px 4px -1px rgba(28, 25, 23, 0.03);
+  --shadow-glass: 0 8px 30px rgba(0, 0, 0, 0.04); /* Soft glass shadow */
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+// -----------------------------------------------------------------------------
+// 2. Element Plus Overrides
+// -----------------------------------------------------------------------------
+:root {
+  --el-color-primary: var(--color-primary);
+  --el-color-primary-light-3: #fbbf24;
+  --el-color-primary-light-5: #fcd34d;
+  --el-color-primary-light-7: #fde68a;
+  --el-color-primary-light-9: #fffbeb;
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-secondary);
+  --el-border-color-light: var(--border-light);
+  --el-font-family: var(--font-sans);
+  --el-bg-color: #ffffff;
 }
+
+// -----------------------------------------------------------------------------
+// 3. Base Styles
+// -----------------------------------------------------------------------------
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--bg-body);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+  font-size: 14px;
 }
 
-// Common Utility Classes
+/* Anthropic-style Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+// -----------------------------------------------------------------------------
+// 4. Glassmorphism Utilities
+// -----------------------------------------------------------------------------
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-lg);
+}
+
+.glass-sidebar {
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-right: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+// -----------------------------------------------------------------------------
+// 5. Common Components
+// -----------------------------------------------------------------------------
 .page-container {
-  padding: 24px 32px;
-  max-width: 1600px;
+  padding: 40px 56px;
+  max-width: 1440px;
   margin: 0 auto;
+  min-height: 100vh;
 }
 
 .page-header {
-  margin-bottom: 32px;
+  margin-bottom: 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 
   h1 {
-    font-size: 24px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 8px 0;
+    font-size: 32px;
+    margin-bottom: 8px;
+    position: relative;
+    display: inline-block;
   }
 
   p {
     color: var(--text-secondary);
-    font-size: 14px;
-    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 15px;
   }
 }
 
-.card-panel {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-light);
+// Buttons - Clean, Pill-shaped
+.el-button {
   border-radius: 8px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+
+  &--primary {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.15);
+
+    &:hover {
+      background-color: var(--color-primary-hover);
+      transform: translateY(-1px);
+    }
+  }
+
+  &--default {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: var(--border-light);
+    color: var(--text-secondary);
+
+    &:hover {
+      background: #fff;
+      color: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+  }
+}
+
+// Tags - Earthy tones
+.el-tag {
+  border-radius: 6px;
+  border: none;
+  font-weight: 500;
+
+  &--success { background: #d1fae5; color: #065f46; }
+  &--warning { background: #fef3c7; color: #92400e; }
+  &--danger { background: #fee2e2; color: #991b1b; }
+  &--info { background: #e7e5e4; color: #44403c; }
+}
+
+// Card Panel
+.card-panel {
+  @extend .glass-panel;
   padding: 24px;
-  transition: border-color 0.2s;
+  margin-bottom: 24px;
+  transition: all 0.3s ease;
+
+  .panel-header {
+    margin-bottom: 20px;
+    h3 {
+      font-family: var(--font-sans); /* UI headers can remain Sans */
+      font-size: 16px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+  }
 
   &:hover {
-    border-color: var(--border-hover);
+    box-shadow: var(--shadow-glass);
+    background: rgba(255, 255, 255, 0.75);
   }
 }
 
-// Scrollbar
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
-  border-radius: 3px;
-
-  &:hover {
-    background: var(--text-tertiary);
-  }
-}
-
-// Utility classes
+// Utility
 .text-success { color: var(--color-success); }
 .text-danger { color: var(--color-danger); }
 .text-warning { color: var(--color-warning); }
 .text-secondary { color: var(--text-secondary); }
-.text-tertiary { color: var(--text-tertiary); }
+.font-mono { font-family: var(--font-mono); }
+.font-serif { font-family: var(--font-serif); }
 .font-medium { font-weight: 500; }
-.font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+
+// Inputs
+.el-input__wrapper, .el-select__wrapper {
+  background-color: var(--bg-input) !important;
+  box-shadow: none !important;
+  border: 1px solid var(--border-light);
+
+  &.is-focus {
+    border-color: var(--color-primary);
+    background-color: #fff !important;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+// Table transparent fix
+.el-table {
+  background-color: transparent !important;
+
+  tr, th {
+    background-color: transparent !important;
+  }
+
+  td.el-table__cell, th.el-table__cell.is-leaf {
+    border-bottom: 1px solid var(--border-light) !important;
+  }
+
+  --el-table-row-hover-bg-color: var(--bg-hover) !important;
+}

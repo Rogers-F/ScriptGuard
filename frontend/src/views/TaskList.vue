@@ -1,20 +1,20 @@
 <template>
   <div class="page-container task-list">
     <div class="page-header">
-      <div class="header-left">
-        <h1>任务管理</h1>
-        <p>配置与调度系统任务</p>
+      <div>
+        <h1>Tasks</h1>
+        <p>Manage and schedule automation scripts</p>
       </div>
-      <el-button type="primary" :icon="Plus" @click="showCreateDialog = true">
-        新建任务
+      <el-button type="primary" :icon="Plus" class="create-btn" @click="showCreateDialog = true">
+        New Task
       </el-button>
     </div>
 
     <!-- Empty State -->
     <el-empty
       v-if="!taskStore.tasks.length && !taskStore.loading"
-      description="暂无任务"
-      :image-size="120"
+      description="No tasks configured"
+      :image-size="140"
     />
 
     <!-- Task Grid -->
@@ -22,62 +22,60 @@
       <div
         v-for="task in taskStore.tasks"
         :key="task.id"
-        class="task-card"
+        class="task-card glass-panel"
         :class="{ inactive: !task.enabled }"
       >
         <div class="card-header">
-          <div class="task-identity">
-            <h3 class="task-name" :title="task.name">{{ task.name }}</h3>
+          <div class="header-main">
+            <h3 class="task-name font-serif" :title="task.name">{{ task.name }}</h3>
             <el-tag
-              :type="task.enabled ? 'success' : 'info'"
-              size="small"
-              effect="plain"
-              class="status-tag"
+                :type="task.enabled ? 'success' : 'info'"
+                size="small"
+                class="status-badge"
             >
-              {{ task.enabled ? 'Active' : 'Stopped' }}
+                {{ task.enabled ? 'Active' : 'Inactive' }}
             </el-tag>
           </div>
-
-          <div class="action-buttons">
-            <el-tooltip content="立即执行" :show-after="500">
-              <el-button
-                text
-                circle
-                size="small"
-                @click="executeTask(task.id)"
-                :loading="executingTasks.has(task.id)"
-              >
-                <el-icon><VideoPlay /></el-icon>
-              </el-button>
-            </el-tooltip>
-            <el-dropdown trigger="click" @command="(cmd) => handleCommand(cmd, task)">
-              <el-button text circle size="small">
-                <el-icon><More /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="edit">编辑任务</el-dropdown-item>
-                  <el-dropdown-item command="toggle">{{ task.enabled ? '停用任务' : '启用任务' }}</el-dropdown-item>
-                  <el-dropdown-item divided command="delete" class="text-danger">删除任务</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
+          <el-dropdown trigger="click" @command="(cmd) => handleCommand(cmd, task)">
+            <el-button text circle size="small">
+              <el-icon><MoreFilled /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="edit">Edit</el-dropdown-item>
+                <el-dropdown-item command="toggle">{{ task.enabled ? 'Disable' : 'Enable' }}</el-dropdown-item>
+                <el-dropdown-item divided command="delete" class="text-danger">Delete</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
 
         <div class="card-body">
-          <div class="info-item">
-            <span class="label">Schedule</span>
-            <span class="value font-mono">{{ task.cron_expr || '-' }}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">Environment</span>
+          <div class="info-row">
+            <span class="label">Env</span>
             <span class="value">{{ task.conda_env }}</span>
           </div>
-          <div class="info-item full-width">
-            <span class="label">Script</span>
-            <span class="value path" :title="task.script_path">{{ task.script_path }}</span>
+          <div class="info-row">
+             <span class="label">Schedule</span>
+             <span class="value font-mono">{{ task.cron_expr || 'Manual Only' }}</span>
           </div>
+          <div class="script-path" :title="task.script_path">
+             <el-icon><Folder /></el-icon>
+             {{ getFileName(task.script_path) }}
+          </div>
+        </div>
+
+        <div class="card-footer">
+           <el-button
+             class="run-btn"
+             :type="task.enabled ? 'primary' : 'default'"
+             plain
+             size="small"
+             :loading="executingTasks.has(task.id)"
+             @click="executeTask(task.id)"
+           >
+             <el-icon><VideoPlay /></el-icon> Run Now
+           </el-button>
         </div>
       </div>
     </div>
@@ -85,8 +83,8 @@
     <!-- Create/Edit Dialog -->
     <el-dialog
       v-model="showCreateDialog"
-      :title="editingTask ? '编辑任务' : '新建任务'"
-      width="600px"
+      :title="editingTask ? 'Edit Task' : 'New Task'"
+      width="560px"
       class="custom-dialog"
       :close-on-click-modal="false"
       @closed="resetForm"
@@ -96,12 +94,13 @@
         :model="taskForm"
         :rules="taskRules"
         label-position="top"
+        class="clean-form"
       >
-        <el-form-item label="任务名称" prop="name">
-          <el-input v-model="taskForm.name" placeholder="如：数据每日备份" />
+        <el-form-item label="Name" prop="name">
+          <el-input v-model="taskForm.name" placeholder="e.g. Daily Data Processing" />
         </el-form-item>
 
-        <el-form-item label="执行环境 (Conda)" prop="conda_env">
+        <el-form-item label="Conda Environment" prop="conda_env">
           <el-select
             v-model="taskForm.conda_env"
             :placeholder="getEnvironmentPlaceholder()"
@@ -109,68 +108,45 @@
             filterable
             :loading="taskStore.environmentsLoading"
           >
-            <template v-if="taskStore.environmentsError">
-              <el-option disabled value="">
-                <div style="color: var(--color-danger); text-align: center; padding: 8px 0">
-                  {{ taskStore.environmentsError }}
-                </div>
-              </el-option>
-            </template>
-            <template v-else-if="!taskStore.environmentsLoading && taskStore.environments.length === 0">
-              <el-option disabled value="">
-                <div style="color: var(--text-secondary); text-align: center; padding: 8px 0">
-                  未找到 Conda 环境，请手动输入或检查 Conda 安装
-                </div>
-              </el-option>
-            </template>
-            <template v-else>
-              <el-option
-                v-for="env in taskStore.environments"
-                :key="env.name"
-                :label="env.name"
-                :value="env.name"
-                :disabled="!env.is_valid"
-              >
-                <div style="display: flex; justify-content: space-between; align-items: center">
-                  <span>{{ env.name }}</span>
-                  <el-tag v-if="!env.is_valid" type="danger" size="small">无效</el-tag>
-                </div>
-              </el-option>
-            </template>
+            <el-option
+              v-for="env in taskStore.environments"
+              :key="env.name"
+              :label="env.name"
+              :value="env.name"
+              :disabled="!env.is_valid"
+            />
           </el-select>
         </el-form-item>
 
-        <el-form-item label="脚本路径" prop="script_path">
-          <el-input v-model="taskForm.script_path" placeholder="C:\path\to\script.py">
+        <el-form-item label="Script File" prop="script_path">
+          <el-input v-model="taskForm.script_path" placeholder="Path to .py file">
             <template #append>
-              <el-button @click="selectScriptFile">浏览</el-button>
+              <el-button @click="selectScriptFile">Browse</el-button>
             </template>
           </el-input>
         </el-form-item>
 
-        <el-form-item label="执行计划" prop="cron_expr">
+        <el-form-item label="Schedule" prop="cron_expr">
           <CronEditor v-model="taskForm.cron_expr" />
         </el-form-item>
 
         <div class="form-switches">
-          <el-form-item class="mb-0">
-            <div class="switch-row">
-              <span>失败告警通知</span>
-              <el-switch v-model="taskForm.notify_on_failure" />
-            </div>
-          </el-form-item>
-          <el-form-item class="mb-0">
-            <div class="switch-row">
-              <span>立即启用</span>
-              <el-switch v-model="taskForm.enabled" />
-            </div>
-          </el-form-item>
+          <div class="switch-row">
+            <span>Failure Notifications</span>
+            <el-switch v-model="taskForm.notify_on_failure" />
+          </div>
+          <div class="switch-row">
+            <span>Active Status</span>
+            <el-switch v-model="taskForm.enabled" />
+          </div>
         </div>
       </el-form>
 
       <template #footer>
-        <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveTask" :loading="saving">保存</el-button>
+        <div class="dialog-footer">
+          <el-button @click="showCreateDialog = false">Cancel</el-button>
+          <el-button type="primary" @click="saveTask" :loading="saving">Save Task</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -178,7 +154,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { Plus, VideoPlay, More } from '@element-plus/icons-vue'
+import { Plus, VideoPlay, MoreFilled, Folder } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useTaskStore } from '@/stores/task'
 import CronEditor from '@/components/CronEditor.vue'
@@ -202,16 +178,21 @@ const taskForm = reactive({
 })
 
 const taskRules = {
-  name: [{ required: true, message: '请输入任务名称', trigger: 'blur' }],
-  script_path: [{ required: true, message: '请选择脚本路径', trigger: 'blur' }],
-  conda_env: [{ required: true, message: '请选择执行环境', trigger: 'change' }],
-  cron_expr: [{ required: true, message: '请配置执行计划', trigger: 'change' }]
+  name: [{ required: true, message: 'Required', trigger: 'blur' }],
+  script_path: [{ required: true, message: 'Required', trigger: 'blur' }],
+  conda_env: [{ required: true, message: 'Required', trigger: 'change' }],
+  cron_expr: [{ required: true, message: 'Required', trigger: 'change' }]
 }
 
 onMounted(async () => {
   await taskStore.loadTasks()
   await taskStore.loadEnvironments()
 })
+
+function getFileName(path) {
+  if (!path) return 'No file';
+  return path.split(/[\\/]/).pop();
+}
 
 function handleCommand(command, task) {
   if (command === 'edit') editTask(task)
@@ -227,23 +208,21 @@ function editTask(task) {
 
 async function saveTask() {
   if (!taskFormRef.value) return
-
   await taskFormRef.value.validate(async (valid) => {
     if (!valid) return
-
     saving.value = true
     try {
       if (editingTask.value) {
         await taskStore.updateTask({ ...editingTask.value, ...taskForm })
-        ElMessage.success('任务更新成功')
+        ElMessage.success('Saved')
       } else {
         await taskStore.createTask(taskForm)
-        ElMessage.success('任务创建成功')
+        ElMessage.success('Created')
       }
       showCreateDialog.value = false
       resetForm()
     } catch (error) {
-      ElMessage.error('操作失败: ' + error.message)
+      ElMessage.error(error.message)
     } finally {
       saving.value = false
     }
@@ -251,48 +230,27 @@ async function saveTask() {
 }
 
 function resetForm() {
-  Object.assign(taskForm, {
-    id: '',
-    name: '',
-    script_path: '',
-    conda_env: '',
-    cron_expr: '',
-    enabled: true,
-    notify_on_failure: true
-  })
+  Object.assign(taskForm, { id: '', name: '', script_path: '', conda_env: '', cron_expr: '', enabled: true, notify_on_failure: true })
   editingTask.value = null
   taskFormRef.value?.resetFields()
 }
 
 async function deleteTask(task) {
   try {
-    await ElMessageBox.confirm(
-      `确定要删除任务 "${task.name}" 吗？此操作不可恢复。`,
-      '删除确认',
-      {
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-
+    await ElMessageBox.confirm(`Delete "${task.name}"?`, 'Confirm', { confirmButtonText: 'Delete', cancelButtonText: 'Cancel', type: 'warning' })
     await taskStore.deleteTask(task.id)
-    ElMessage.success('任务已删除')
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除失败: ' + error.message)
-    }
-  }
+    ElMessage.success('Deleted')
+  } catch (error) { if (error !== 'cancel') ElMessage.error(error.message) }
 }
 
 async function toggleTask(task) {
   try {
     task.enabled = !task.enabled
     await taskStore.updateTask(task)
-    ElMessage.success(task.enabled ? '任务已启用' : '任务已停用')
+    ElMessage.success(task.enabled ? 'Enabled' : 'Disabled')
   } catch (error) {
     task.enabled = !task.enabled
-    ElMessage.error('操作失败: ' + error.message)
+    ElMessage.error(error.message)
   }
 }
 
@@ -300,35 +258,24 @@ async function executeTask(taskId) {
   executingTasks.value.add(taskId)
   try {
     await taskStore.executeTask(taskId)
-    ElMessage.success('任务已开始执行，请在日志监控中查看输出')
+    ElMessage.success('Started')
   } catch (error) {
-    ElMessage.error('执行失败: ' + error.message)
+    ElMessage.error(error.message)
   } finally {
     executingTasks.value.delete(taskId)
   }
 }
 
 function getEnvironmentPlaceholder() {
-  if (taskStore.environmentsLoading) {
-    return '正在加载环境列表...'
-  } else if (taskStore.environmentsError) {
-    return '加载环境失败'
-  } else if (taskStore.environments.length === 0) {
-    return '未找到环境，可手动输入'
-  }
-  return '选择Conda环境'
+  if (taskStore.environmentsLoading) return 'Loading...'
+  return 'Select Environment'
 }
 
 async function selectScriptFile() {
   try {
     const selectedPath = await api.selectScriptFile()
-    if (selectedPath) {
-      taskForm.script_path = selectedPath
-    }
-  } catch (error) {
-    console.error('选择脚本文件失败:', error)
-    ElMessage.warning(`选择文件失败: ${error.message || '未知错误'}，请手动输入脚本路径`)
-  }
+    if (selectedPath) taskForm.script_path = selectedPath
+  } catch (error) { ElMessage.warning(error.message) }
 }
 </script>
 
@@ -336,24 +283,16 @@ async function selectScriptFile() {
 .task-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  gap: 24px;
 }
 
 .task-card {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  padding: 20px;
-  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
 
-  &:hover {
-    border-color: var(--border-hover);
-  }
-
   &.inactive {
-    opacity: 0.6;
+    opacity: 0.8;
+    background: rgba(240, 240, 240, 0.5);
   }
 
   .card-header {
@@ -362,82 +301,70 @@ async function selectScriptFile() {
     align-items: flex-start;
     margin-bottom: 20px;
 
-    .task-identity {
-      .task-name {
-        font-size: 16px;
-        font-weight: 600;
-        margin: 0 0 8px 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 200px;
-      }
-    }
+    .header-main {
+        flex: 1;
+        margin-right: 12px;
 
-    .action-buttons {
-      display: flex;
-      gap: 4px;
+        .task-name {
+            font-size: 18px;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     }
   }
 
   .card-body {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    flex: 1;
     font-size: 13px;
 
-    .info-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
 
-      &.full-width {
-        grid-column: span 2;
-      }
-
-      .label {
-        color: var(--text-tertiary);
-        font-size: 11px;
-        text-transform: uppercase;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-      }
-
-      .value {
-        color: var(--text-secondary);
-
-        &.path {
-          font-family: monospace;
-          background: var(--bg-tertiary);
-          padding: 4px 6px;
-          border-radius: 4px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        &.font-mono {
-          font-family: monospace;
-        }
-      }
+        .label { color: var(--text-tertiary); }
+        .value { color: var(--text-secondary); font-weight: 500; }
     }
+
+    .script-path {
+        margin-top: 16px;
+        background: rgba(0,0,0,0.03);
+        padding: 8px 12px;
+        border-radius: 6px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+    }
+  }
+
+  .card-footer {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: flex-end;
   }
 }
 
 .form-switches {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-light);
+    margin-top: 24px;
+    background: var(--bg-hover);
+    padding: 16px;
+    border-radius: 8px;
 
-  .switch-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    padding: 8px 0;
-  }
+    .switch-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        &:last-child { margin-bottom: 0; }
+        color: var(--text-secondary);
+    }
 }
-
-.text-danger { color: var(--color-danger); }
-.mb-0 { margin-bottom: 0; }
 </style>

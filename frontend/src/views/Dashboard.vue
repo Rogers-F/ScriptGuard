@@ -2,45 +2,56 @@
   <div class="page-container dashboard">
     <div class="page-header">
       <div>
-        <h1>仪表盘</h1>
-        <p>系统概况与运行统计</p>
+        <h1>Dashboard</h1>
+        <p>System overview and performance metrics</p>
       </div>
     </div>
 
     <!-- Stats Grid -->
     <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">总任务数</div>
-        <div class="stat-value">{{ stats.totalTasks }}</div>
+      <div class="stat-card glass-panel">
+        <div class="stat-header">
+           <span class="label">Total Tasks</span>
+           <el-icon><List /></el-icon>
+        </div>
+        <div class="stat-value font-serif">{{ stats.totalTasks }}</div>
         <div class="stat-footer">
-          <span class="status-indicator" :class="{ active: stats.enabledTasks > 0 }"></span>
-          {{ stats.enabledTasks }} 个任务正在运行
+          <span class="text-primary">{{ stats.enabledTasks }}</span> active
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-label">今日执行成功</div>
-        <div class="stat-value text-success">{{ stats.todaySuccess }}</div>
+      <div class="stat-card glass-panel">
+        <div class="stat-header">
+           <span class="label">Success Today</span>
+           <el-icon class="text-success"><Check /></el-icon>
+        </div>
+        <div class="stat-value font-serif text-success">{{ stats.todaySuccess }}</div>
         <div class="stat-footer">
-          成功率 {{ stats.successRate }}%
+          Rate: {{ stats.successRate }}%
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-label">今日执行失败</div>
-        <div class="stat-value" :class="{ 'text-danger': stats.todayFailed > 0 }">
+      <div class="stat-card glass-panel">
+        <div class="stat-header">
+           <span class="label">Failed Today</span>
+           <el-icon class="text-danger"><Warning /></el-icon>
+        </div>
+        <div class="stat-value font-serif" :class="{ 'text-danger': stats.todayFailed > 0 }">
           {{ stats.todayFailed }}
         </div>
-        <div class="stat-footer text-tertiary">
-          需要关注
+        <div class="stat-footer">
+          {{ stats.todayFailed > 0 ? 'Requires attention' : 'No issues' }}
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-label">平均耗时</div>
-        <div class="stat-value">{{ stats.avgDuration }}<span class="unit">s</span></div>
+      <div class="stat-card glass-panel">
+        <div class="stat-header">
+           <span class="label">Avg Duration</span>
+           <el-icon><Timer /></el-icon>
+        </div>
+        <div class="stat-value font-serif">{{ stats.avgDuration }}<span class="unit">s</span></div>
         <div class="stat-footer">
-          近7天平均值
+          7-day average
         </div>
       </div>
     </div>
@@ -49,15 +60,14 @@
     <div class="charts-section">
       <div class="card-panel chart-panel">
         <div class="panel-header">
-          <h3>执行趋势</h3>
-          <el-tag type="info" size="small" effect="plain">示例数据</el-tag>
+          <h3>Execution Trend</h3>
         </div>
         <v-chart :option="executionTrendOption" autoresize class="chart-container" />
       </div>
 
       <div class="card-panel chart-panel">
         <div class="panel-header">
-          <h3>任务状态分布</h3>
+          <h3>Task Distribution</h3>
         </div>
         <v-chart :option="taskStatusOption" autoresize class="chart-container" />
       </div>
@@ -66,37 +76,39 @@
     <!-- Recent Executions -->
     <div class="card-panel recent-section">
       <div class="panel-header">
-        <h3>最近执行记录</h3>
-        <el-button text bg size="small" @click="$router.push('/history')">
-          查看全部
+        <h3>Recent Activity</h3>
+        <el-button link type="primary" @click="$router.push('/history')">
+          View All History
         </el-button>
       </div>
 
       <el-table
         :data="recentExecutions"
         style="width: 100%"
-        :header-cell-style="{ background: 'transparent', color: '#a1a1aa' }"
+        :header-cell-style="{ background: 'transparent', color: '#78716c', fontFamily: 'var(--font-sans)' }"
         :row-style="{ background: 'transparent' }"
       >
-        <el-table-column prop="task_name" label="任务名称" min-width="180">
+        <el-table-column prop="task_name" label="Task" min-width="180">
           <template #default="{ row }">
-            <span class="font-medium">{{ getTaskName(row.task_id) }}</span>
+            <span class="font-medium text-primary">{{ getTaskName(row.task_id) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="start_time" label="执行时间" width="180">
+        <el-table-column prop="start_time" label="Time" width="180">
           <template #default="{ row }">
             <span class="text-secondary">{{ formatTime(row.start_time) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100">
+        <el-table-column prop="status" label="Status" width="120">
           <template #default="{ row }">
-            <span :class="['status-dot', row.status]"></span>
-            <span class="status-text">{{ getStatusText(row.status) }}</span>
+            <div class="status-cell">
+               <div class="dot" :class="row.status"></div>
+               <span>{{ getStatusText(row.status) }}</span>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column prop="duration_ms" label="耗时" width="120">
+        <el-table-column prop="duration_ms" label="Duration" width="120">
           <template #default="{ row }">
-            <span class="text-mono">{{ (row.duration_ms / 1000).toFixed(2) }}s</span>
+            <span class="text-secondary font-mono">{{ (row.duration_ms / 1000).toFixed(2) }}s</span>
           </template>
         </el-table-column>
       </el-table>
@@ -111,6 +123,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
+import { List, Check, Warning, Timer } from '@element-plus/icons-vue'
 import { useTaskStore } from '@/stores/task'
 
 use([CanvasRenderer, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
@@ -132,42 +145,45 @@ const executionTrendOption = computed(() => ({
   backgroundColor: 'transparent',
   tooltip: {
     trigger: 'axis',
-    backgroundColor: '#1f1f1f',
-    borderColor: '#333',
-    textStyle: { color: '#e5e5e5' },
-    padding: [8, 12]
+    backgroundColor: '#fff',
+    borderColor: '#e7e5e4',
+    textStyle: { color: '#1c1917', fontFamily: 'Inter' },
+    padding: 12,
+    extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-radius: 8px;'
   },
-  grid: { left: 0, right: 0, bottom: 0, top: 20, containLabel: true },
+  grid: { left: 10, right: 10, bottom: 0, top: 30, containLabel: true },
   xAxis: {
     type: 'category',
-    data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     axisLine: { show: false },
     axisTick: { show: false },
-    axisLabel: { color: '#71717a' }
+    axisLabel: { color: '#a8a29e', fontFamily: 'Inter' }
   },
   yAxis: {
     type: 'value',
-    splitLine: { lineStyle: { color: '#27272a' } },
-    axisLabel: { color: '#71717a' }
+    splitLine: { lineStyle: { color: '#e7e5e4', type: 'dashed' } },
+    axisLabel: { color: '#a8a29e', fontFamily: 'Inter' }
   },
   series: [
     {
-      name: '成功',
+      name: 'Success',
       type: 'line',
       data: [12, 15, 10, 18, 14, 16, 20],
       smooth: true,
-      symbol: 'none',
-      lineStyle: { color: '#10b981', width: 2 },
-      itemStyle: { color: '#10b981' }
+      symbol: 'circle',
+      symbolSize: 8,
+      lineStyle: { color: '#059669', width: 2 },
+      itemStyle: { color: '#fff', borderWidth: 2, borderColor: '#059669' }
     },
     {
-      name: '失败',
+      name: 'Failed',
       type: 'line',
       data: [2, 1, 3, 1, 2, 0, 1],
       smooth: true,
-      symbol: 'none',
-      lineStyle: { color: '#ef4444', width: 2 },
-      itemStyle: { color: '#ef4444' }
+      symbol: 'circle',
+      symbolSize: 8,
+      lineStyle: { color: '#dc2626', width: 2 },
+      itemStyle: { color: '#fff', borderWidth: 2, borderColor: '#dc2626' }
     }
   ]
 }))
@@ -176,26 +192,26 @@ const taskStatusOption = computed(() => ({
   backgroundColor: 'transparent',
   tooltip: {
     trigger: 'item',
-    backgroundColor: '#1f1f1f',
-    borderColor: '#333',
-    textStyle: { color: '#e5e5e5' }
+    backgroundColor: '#fff',
+    borderColor: '#e7e5e4'
   },
   legend: {
     bottom: 0,
-    textStyle: { color: '#a1a1aa' },
+    textStyle: { color: '#78716c' },
     itemWidth: 8,
     itemHeight: 8
   },
   series: [
     {
       type: 'pie',
-      radius: ['50%', '70%'],
+      radius: ['60%', '80%'],
       center: ['50%', '45%'],
       data: [
-        { value: stats.enabledTasks, name: '运行中', itemStyle: { color: '#3b82f6' } },
-        { value: stats.totalTasks - stats.enabledTasks, name: '已停止', itemStyle: { color: '#3f3f46' } }
+        { value: stats.enabledTasks, name: 'Active', itemStyle: { color: '#d97706' } },
+        { value: stats.totalTasks - stats.enabledTasks, name: 'Stopped', itemStyle: { color: '#e7e5e4' } }
       ],
-      label: { show: false }
+      label: { show: false },
+      itemStyle: { borderColor: '#f4f2ed', borderWidth: 2 }
     }
   ]
 }))
@@ -232,7 +248,7 @@ async function loadDashboardData() {
 
 function getTaskName(taskId) {
   const task = taskStore.tasks.find(t => t.id === taskId)
-  return task ? task.name : '未知任务'
+  return task ? task.name : 'Unknown'
 }
 
 function formatTime(time) {
@@ -240,7 +256,7 @@ function formatTime(time) {
 }
 
 function getStatusText(status) {
-  const map = { success: '成功', failed: '失败', running: '运行中' }
+  const map = { success: 'Success', failed: 'Failed', running: 'Running' }
   return map[status] || status
 }
 </script>
@@ -251,57 +267,44 @@ function getStatusText(status) {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 24px;
-    margin-bottom: 24px;
+    margin-bottom: 32px;
 
     @media (max-width: 1200px) {
       grid-template-columns: repeat(2, 1fr);
     }
 
     .stat-card {
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-light);
-      border-radius: 8px;
-      padding: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 140px;
 
-      .stat-label {
-        font-size: 13px;
-        color: var(--text-secondary);
-        margin-bottom: 8px;
+      .stat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        color: var(--text-tertiary);
+
+        .label {
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
       }
 
       .stat-value {
-        font-size: 28px;
-        font-weight: 600;
+        font-size: 36px;
         color: var(--text-primary);
-        letter-spacing: -0.02em;
-        margin-bottom: 8px;
+        line-height: 1.1;
 
-        .unit {
-          font-size: 14px;
-          color: var(--text-secondary);
-          margin-left: 4px;
-          font-weight: normal;
-        }
-
-        &.text-success { color: var(--color-success); }
-        &.text-danger { color: var(--color-danger); }
+        .unit { font-size: 16px; color: var(--text-tertiary); margin-left: 4px; font-family: var(--font-sans); }
       }
 
       .stat-footer {
-        font-size: 12px;
+        font-size: 13px;
         color: var(--text-secondary);
-        display: flex;
-        align-items: center;
-        gap: 6px;
-
-        .status-indicator {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background-color: var(--text-tertiary);
-
-          &.active { background-color: var(--color-success); }
-        }
       }
     }
   }
@@ -310,14 +313,14 @@ function getStatusText(status) {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 24px;
-    margin-bottom: 24px;
+    margin-bottom: 32px;
 
     @media (max-width: 1000px) {
       grid-template-columns: 1fr;
     }
 
     .chart-panel {
-      height: 320px;
+      height: 360px;
       display: flex;
       flex-direction: column;
 
@@ -326,12 +329,8 @@ function getStatusText(status) {
         justify-content: space-between;
         align-items: center;
         margin-bottom: 16px;
-
-        h3 {
-          font-size: 16px;
-          font-weight: 500;
-          margin: 0;
-        }
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-light);
       }
 
       .chart-container {
@@ -341,41 +340,20 @@ function getStatusText(status) {
     }
   }
 
-  .recent-section {
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
+  .status-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
-      h3 {
-        font-size: 16px;
-        font-weight: 500;
-        margin: 0;
-      }
+    .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+
+        &.success { background: var(--color-success); }
+        &.failed { background: var(--color-danger); }
+        &.running { background: var(--color-warning); }
     }
-  }
-
-  .status-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    margin-right: 8px;
-
-    &.success { background-color: var(--color-success); }
-    &.failed { background-color: var(--color-danger); }
-    &.running { background-color: var(--color-warning); }
-  }
-
-  .text-mono {
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
-
-  .font-medium {
-    font-weight: 500;
   }
 }
 </style>
