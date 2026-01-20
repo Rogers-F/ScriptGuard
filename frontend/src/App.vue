@@ -49,12 +49,6 @@
           </div>
         </el-menu>
 
-        <div class="sidebar-footer">
-          <div class="user-card glass-panel">
-            <div class="avatar">{{ langStore.isChinese ? '管理员' : 'Admin' }}</div>
-            <div class="status-dot"></div>
-          </div>
-        </div>
       </el-aside>
 
       <el-main class="app-main">
@@ -169,30 +163,6 @@ const t = computed(() => langStore.t)
         font-weight: 600;
 
         .el-icon { color: var(--color-primary); }
-      }
-    }
-  }
-
-  .sidebar-footer {
-    padding: 0 8px;
-    .user-card {
-      padding: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border: 1px solid rgba(255,255,255,0.4);
-
-      .avatar {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text-secondary);
-      }
-
-      .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: var(--color-success);
       }
     }
   }
