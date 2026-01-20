@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"runtime"
 	"scriptguard/backend/database"
 	"scriptguard/backend/models"
 	"scriptguard/backend/services"
@@ -468,4 +470,71 @@ func (a *App) SelectScriptFile() (string, error) {
 // SG-013: TestNotification 测试通知
 func (a *App) TestNotification(target string, webhook string) error {
 	return a.notifier.SendTest(target, webhook)
+}
+
+// ExportDebugLogs 导出调试日志到文件
+func (a *App) ExportDebugLogs(frontendLogs string) (string, error) {
+	// 打开保存文件对话框
+	dialog := application.SaveFileDialog()
+	dialog.SetTitle("导出调试日志")
+	dialog.AddFilter("文本文件", "*.txt")
+	dialog.SetFilename("ScriptGuard_debug_" + time.Now().Format("20060102_150405") + ".txt")
+
+	path, err := dialog.PromptForSingleSelection()
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		return "", nil // 用户取消
+	}
+
+	// 构建日志内容
+	var content strings.Builder
+
+	// 写入头部信息
+	content.WriteString("========================================\n")
+	content.WriteString("ScriptGuard 调试日志导出\n")
+	content.WriteString("========================================\n")
+	content.WriteString(fmt.Sprintf("导出时间: %s\n", time.Now().Format("2006-01-02 15:04:05")))
+	content.WriteString(fmt.Sprintf("应用版本: %s\n", "1.1.2"))
+	content.WriteString("\n")
+
+	// 写入系统信息
+	content.WriteString("--- 系统信息 ---\n")
+	content.WriteString(fmt.Sprintf("操作系统: %s/%s\n", runtime.GOOS, runtime.GOARCH))
+	content.WriteString(fmt.Sprintf("Go版本: %s\n", runtime.Version()))
+	content.WriteString("\n")
+
+	// 写入前端控制台日志（如果有）
+	if frontendLogs != "" {
+		content.WriteString("--- 前端控制台日志 ---\n")
+		content.WriteString(frontendLogs)
+		content.WriteString("\n\n")
+	}
+
+	// 从数据库获取最近的任务执行日志（最近500条）
+	var logs []models.Log
+	a.db.Order("timestamp DESC").Limit(500).Find(&logs)
+
+	content.WriteString("--- 任务执行日志（最近500条）---\n")
+	if len(logs) == 0 {
+		content.WriteString("暂无日志\n")
+	} else {
+		for i := len(logs) - 1; i >= 0; i-- { // 倒序输出，最早的在前
+			log := logs[i]
+			content.WriteString(fmt.Sprintf("[%s] [%s] %s\n",
+				log.Timestamp.Format("2006-01-02 15:04:05"),
+				strings.ToUpper(log.Level),
+				log.Content,
+			))
+		}
+	}
+
+	// 写入文件
+	err = os.WriteFile(path, []byte(content.String()), 0644)
+	if err != nil {
+		return "", fmt.Errorf("写入文件失败: %w", err)
+	}
+
+	return path, nil
 }

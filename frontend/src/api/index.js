@@ -14,7 +14,8 @@ const {
   GetAllConfig,
   UpdateConfig,
   SelectScriptFile,
-  TestNotification
+  TestNotification,
+  ExportDebugLogs
 } = App
 
 // API 封装
@@ -76,6 +77,11 @@ export const api = {
   // SG-013: 测试通知
   async testNotification(target, webhook) {
     return await TestNotification(target, webhook)
+  },
+
+  // 导出调试日志
+  async exportDebugLogs(frontendLogs = '') {
+    return await ExportDebugLogs(frontendLogs)
   }
 }
 

@@ -26,6 +26,9 @@
           {{ autoScroll ? '暂停滚动' : '自动滚动' }}
         </el-button>
         <el-button :icon="Delete" @click="clearLogs">清空</el-button>
+        <el-button :icon="Download" type="primary" @click="exportLogs" :loading="isExporting">
+          导出日志
+        </el-button>
       </div>
     </div>
 
@@ -77,7 +80,8 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { Search, VideoPlay, VideoPause, Delete, Document, WarningFilled } from '@element-plus/icons-vue'
+import { Search, VideoPlay, VideoPause, Delete, Document, WarningFilled, Download } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { useTaskStore } from '@/stores/task'
 import api from '@/api'
 
@@ -92,6 +96,7 @@ const logs = ref([])
 const terminalRef = ref(null)
 const logBodyRef = ref(null)
 const isLoading = ref(false)
+const isExporting = ref(false)
 const loadError = ref(null)
 const failureCount = ref(0)
 const maxRetryInterval = 30000 // 最大退避间隔 30 秒
@@ -168,6 +173,27 @@ function retryLoad() {
   failureCount.value = 0
   loadError.value = null
   loadLogs()
+}
+
+// 导出日志
+async function exportLogs() {
+  isExporting.value = true
+  try {
+    // 收集前端错误信息（如果有的话）
+    const frontendLogs = loadError.value
+      ? `前端错误: ${loadError.value}\n失败次数: ${failureCount.value}\n`
+      : ''
+
+    const savedPath = await api.exportDebugLogs(frontendLogs)
+    if (savedPath) {
+      ElMessage.success(`日志已导出到: ${savedPath}`)
+    }
+  } catch (error) {
+    console.error('导出日志失败:', error)
+    ElMessage.error(`导出失败: ${error.message || '未知错误'}`)
+  } finally {
+    isExporting.value = false
+  }
 }
 
 // 日志轮询（使用 setTimeout 实现动态间隔）
