@@ -1,69 +1,100 @@
-// 全局样式变量
+// Variables
 :root {
-  --primary-color: #6366f1;
-  --success-color: #10b981;
-  --warning-color: #f59e0b;
-  --error-color: #ef4444;
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --border-color: #334155;
+  --bg-body: #0a0a0a;
+  --bg-secondary: #141414;
+  --bg-tertiary: #1f1f1f;
+
+  --border-light: #27272a;
+  --border-hover: #3f3f46;
+
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #64748b;
+
+  --text-primary: #e5e5e5;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #52525b;
 }
 
-// Element Plus 深色主题定制
-html.dark {
-  --el-bg-color: #1e293b;
-  --el-bg-color-page: #0f172a;
-  --el-text-color-primary: #e2e8f0;
-  --el-text-color-regular: #cbd5e1;
-  --el-border-color: #334155;
-  --el-color-primary: #6366f1;
-  --el-color-success: #10b981;
-  --el-color-warning: #f59e0b;
-  --el-color-danger: #ef4444;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-// 卡片样式
-.card {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 12px rgba(99, 102, 241, 0.2);
+// Common Utility Classes
+.page-container {
+  padding: 24px 32px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+  }
+
+  p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 0;
   }
 }
 
-// 按钮样式增强
-.el-button--primary {
-  background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
-  border: none;
+.card-panel {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 24px;
+  transition: border-color 0.2s;
 
   &:hover {
-    background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+    border-color: var(--border-hover);
   }
 }
 
-// 滚动条样式
+// Scrollbar
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
 
   &:hover {
-    background: #64748b;
+    background: var(--text-tertiary);
   }
 }
+
+// Utility classes
+.text-success { color: var(--color-success); }
+.text-danger { color: var(--color-danger); }
+.text-warning { color: var(--color-warning); }
+.text-secondary { color: var(--text-secondary); }
+.text-tertiary { color: var(--text-tertiary); }
+.font-medium { font-weight: 500; }
+.font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }

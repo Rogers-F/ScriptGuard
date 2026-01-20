@@ -1,136 +1,107 @@
 <template>
-  <div class="task-list-page">
+  <div class="page-container task-list">
     <div class="page-header">
       <div class="header-left">
         <h1>任务管理</h1>
-        <p>管理所有Python脚本定时任务</p>
+        <p>配置与调度系统任务</p>
       </div>
-      <div class="header-right">
-        <el-button type="primary" :icon="Plus" @click="showCreateDialog = true">
-          新建任务
-        </el-button>
-      </div>
+      <el-button type="primary" :icon="Plus" @click="showCreateDialog = true">
+        新建任务
+      </el-button>
     </div>
 
-    <!-- 任务列表 -->
-    <div class="task-cards">
-      <el-empty v-if="!taskStore.tasks.length && !taskStore.loading" description="暂无任务，点击右上角新建任务" />
+    <!-- Empty State -->
+    <el-empty
+      v-if="!taskStore.tasks.length && !taskStore.loading"
+      description="暂无任务"
+      :image-size="120"
+    />
 
-      <TransitionGroup name="list" tag="div" class="cards-grid">
-        <div
-          v-for="task in taskStore.tasks"
-          :key="task.id"
-          class="task-card"
-          :class="{ disabled: !task.enabled }"
-        >
-          <div class="card-header">
-            <div class="task-info">
-              <h3>{{ task.name }}</h3>
-              <el-tag :type="task.enabled ? 'success' : 'info'" size="small">
-                {{ task.enabled ? '运行中' : '已停止' }}
-              </el-tag>
-            </div>
-            <div class="card-actions">
-              <el-tooltip content="立即执行">
-                <el-button
-                  :icon="VideoPlay"
-                  circle
-                  size="small"
-                  @click="executeTask(task.id)"
-                  :loading="executingTasks.has(task.id)"
-                />
-              </el-tooltip>
-              <el-tooltip content="编辑">
-                <el-button
-                  :icon="Edit"
-                  circle
-                  size="small"
-                  @click="editTask(task)"
-                />
-              </el-tooltip>
-              <el-tooltip content="删除">
-                <el-button
-                  :icon="Delete"
-                  circle
-                  size="small"
-                  type="danger"
-                  @click="deleteTask(task)"
-                />
-              </el-tooltip>
-            </div>
+    <!-- Task Grid -->
+    <div v-else class="task-grid">
+      <div
+        v-for="task in taskStore.tasks"
+        :key="task.id"
+        class="task-card"
+        :class="{ inactive: !task.enabled }"
+      >
+        <div class="card-header">
+          <div class="task-identity">
+            <h3 class="task-name" :title="task.name">{{ task.name }}</h3>
+            <el-tag
+              :type="task.enabled ? 'success' : 'info'"
+              size="small"
+              effect="plain"
+              class="status-tag"
+            >
+              {{ task.enabled ? 'Active' : 'Stopped' }}
+            </el-tag>
           </div>
 
-          <div class="card-body">
-            <div class="info-row">
-              <el-icon><Document /></el-icon>
-              <span class="label">脚本路径:</span>
-              <span class="value">{{ task.script_path }}</span>
-            </div>
-            <div class="info-row">
-              <el-icon><Box /></el-icon>
-              <span class="label">执行环境:</span>
-              <el-tag size="small" type="warning">{{ task.conda_env }}</el-tag>
-            </div>
-            <div class="info-row">
-              <el-icon><Clock /></el-icon>
-              <span class="label">执行计划:</span>
-              <span class="value schedule">{{ getScheduleText(task.cron_expr) }}</span>
-            </div>
-            <div class="info-row">
-              <el-icon><Bell /></el-icon>
-              <span class="label">失败告警:</span>
-              <el-tag :type="task.notify_on_failure ? 'success' : 'info'" size="small">
-                {{ task.notify_on_failure ? '已开启' : '已关闭' }}
-              </el-tag>
-            </div>
-          </div>
-
-          <div class="card-footer">
-            <el-switch
-              v-model="task.enabled"
-              @change="toggleTask(task)"
-              active-text="启用"
-              inactive-text="停用"
-            />
+          <div class="action-buttons">
+            <el-tooltip content="立即执行" :show-after="500">
+              <el-button
+                text
+                circle
+                size="small"
+                @click="executeTask(task.id)"
+                :loading="executingTasks.has(task.id)"
+              >
+                <el-icon><VideoPlay /></el-icon>
+              </el-button>
+            </el-tooltip>
+            <el-dropdown trigger="click" @command="(cmd) => handleCommand(cmd, task)">
+              <el-button text circle size="small">
+                <el-icon><More /></el-icon>
+              </el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="edit">编辑任务</el-dropdown-item>
+                  <el-dropdown-item command="toggle">{{ task.enabled ? '停用任务' : '启用任务' }}</el-dropdown-item>
+                  <el-dropdown-item divided command="delete" class="text-danger">删除任务</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
         </div>
-      </TransitionGroup>
+
+        <div class="card-body">
+          <div class="info-item">
+            <span class="label">Schedule</span>
+            <span class="value font-mono">{{ task.cron_expr || '-' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Environment</span>
+            <span class="value">{{ task.conda_env }}</span>
+          </div>
+          <div class="info-item full-width">
+            <span class="label">Script</span>
+            <span class="value path" :title="task.script_path">{{ task.script_path }}</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- 创建/编辑任务对话框 -->
+    <!-- Create/Edit Dialog -->
     <el-dialog
       v-model="showCreateDialog"
       :title="editingTask ? '编辑任务' : '新建任务'"
-      width="700px"
+      width="600px"
+      class="custom-dialog"
       :close-on-click-modal="false"
+      @closed="resetForm"
     >
       <el-form
         ref="taskFormRef"
         :model="taskForm"
         :rules="taskRules"
-        label-width="100px"
+        label-position="top"
       >
         <el-form-item label="任务名称" prop="name">
-          <el-input
-            v-model="taskForm.name"
-            placeholder="请输入任务名称"
-            clearable
-          />
+          <el-input v-model="taskForm.name" placeholder="如：数据每日备份" />
         </el-form-item>
 
-        <el-form-item label="脚本路径" prop="script_path">
-          <el-input
-            v-model="taskForm.script_path"
-            placeholder="C:\path\to\script.py"
-            clearable
-          >
-            <template #append>
-              <el-button @click="selectScriptFile">浏览</el-button>
-            </template>
-          </el-input>
-        </el-form-item>
-
-        <el-form-item label="执行环境" prop="conda_env">
+        <el-form-item label="执行环境 (Conda)" prop="conda_env">
           <el-select
             v-model="taskForm.conda_env"
             :placeholder="getEnvironmentPlaceholder()"
@@ -140,14 +111,14 @@
           >
             <template v-if="taskStore.environmentsError">
               <el-option disabled value="">
-                <div style="color: var(--el-color-danger); text-align: center; padding: 8px 0">
+                <div style="color: var(--color-danger); text-align: center; padding: 8px 0">
                   {{ taskStore.environmentsError }}
                 </div>
               </el-option>
             </template>
             <template v-else-if="!taskStore.environmentsLoading && taskStore.environments.length === 0">
               <el-option disabled value="">
-                <div style="color: var(--el-text-color-secondary); text-align: center; padding: 8px 0">
+                <div style="color: var(--text-secondary); text-align: center; padding: 8px 0">
                   未找到 Conda 环境，请手动输入或检查 Conda 安装
                 </div>
               </el-option>
@@ -169,30 +140,37 @@
           </el-select>
         </el-form-item>
 
+        <el-form-item label="脚本路径" prop="script_path">
+          <el-input v-model="taskForm.script_path" placeholder="C:\path\to\script.py">
+            <template #append>
+              <el-button @click="selectScriptFile">浏览</el-button>
+            </template>
+          </el-input>
+        </el-form-item>
+
         <el-form-item label="执行计划" prop="cron_expr">
           <CronEditor v-model="taskForm.cron_expr" />
         </el-form-item>
 
-        <el-form-item label="失败告警">
-          <el-switch v-model="taskForm.notify_on_failure" />
-          <span style="margin-left: 12px; color: var(--text-secondary); font-size: 13px">
-            脚本执行失败时发送钉钉/企业微信通知
-          </span>
-        </el-form-item>
-
-        <el-form-item label="启用状态">
-          <el-switch v-model="taskForm.enabled" />
-          <span style="margin-left: 12px; color: var(--text-secondary); font-size: 13px">
-            关闭后任务将不会自动执行
-          </span>
-        </el-form-item>
+        <div class="form-switches">
+          <el-form-item class="mb-0">
+            <div class="switch-row">
+              <span>失败告警通知</span>
+              <el-switch v-model="taskForm.notify_on_failure" />
+            </div>
+          </el-form-item>
+          <el-form-item class="mb-0">
+            <div class="switch-row">
+              <span>立即启用</span>
+              <el-switch v-model="taskForm.enabled" />
+            </div>
+          </el-form-item>
+        </div>
       </el-form>
 
       <template #footer>
         <el-button @click="showCreateDialog = false">取消</el-button>
-        <el-button type="primary" @click="saveTask" :loading="saving">
-          {{ editingTask ? '保存' : '创建' }}
-        </el-button>
+        <el-button type="primary" @click="saveTask" :loading="saving">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -200,8 +178,8 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { Plus, VideoPlay, More } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, VideoPlay, Edit, Delete, Document, Box, Clock, Bell } from '@element-plus/icons-vue'
 import { useTaskStore } from '@/stores/task'
 import CronEditor from '@/components/CronEditor.vue'
 import api from '@/api'
@@ -235,9 +213,10 @@ onMounted(async () => {
   await taskStore.loadEnvironments()
 })
 
-function getScheduleText(cronExpr) {
-  // 简单解析显示（可以用cronstrue库更准确）
-  return cronExpr || '未设置'
+function handleCommand(command, task) {
+  if (command === 'edit') editTask(task)
+  else if (command === 'delete') deleteTask(task)
+  else if (command === 'toggle') toggleTask(task)
 }
 
 function editTask(task) {
@@ -308,11 +287,12 @@ async function deleteTask(task) {
 
 async function toggleTask(task) {
   try {
+    task.enabled = !task.enabled
     await taskStore.updateTask(task)
     ElMessage.success(task.enabled ? '任务已启用' : '任务已停用')
   } catch (error) {
+    task.enabled = !task.enabled
     ElMessage.error('操作失败: ' + error.message)
-    task.enabled = !task.enabled // 回滚
   }
 }
 
@@ -347,141 +327,117 @@ async function selectScriptFile() {
     }
   } catch (error) {
     console.error('选择脚本文件失败:', error)
-    // 显示真实错误信息，同时提示用户可以手动输入
     ElMessage.warning(`选择文件失败: ${error.message || '未知错误'}，请手动输入脚本路径`)
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.task-list-page {
-  .page-header {
+.task-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.task-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 20px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+
+  &:hover {
+    border-color: var(--border-hover);
+  }
+
+  &.inactive {
+    opacity: 0.6;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+
+    .task-identity {
+      .task-name {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 8px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 200px;
+      }
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 4px;
+    }
+  }
+
+  .card-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    font-size: 13px;
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      &.full-width {
+        grid-column: span 2;
+      }
+
+      .label {
+        color: var(--text-tertiary);
+        font-size: 11px;
+        text-transform: uppercase;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+      }
+
+      .value {
+        color: var(--text-secondary);
+
+        &.path {
+          font-family: monospace;
+          background: var(--bg-tertiary);
+          padding: 4px 6px;
+          border-radius: 4px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        &.font-mono {
+          font-family: monospace;
+        }
+      }
+    }
+  }
+}
+
+.form-switches {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+
+  .switch-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
-
-    .header-left {
-      h1 {
-        font-size: 28px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        background: linear-gradient(90deg, #6366f1, #8b5cf6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-
-      p {
-        color: var(--text-secondary);
-        font-size: 14px;
-      }
-    }
-  }
-
-  .task-cards {
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-      gap: 20px;
-    }
-
-    .task-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
-      padding: 20px;
-      transition: all 0.3s ease;
-
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
-        border-color: #6366f1;
-      }
-
-      &.disabled {
-        opacity: 0.6;
-      }
-
-      .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 16px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-
-        .task-info {
-          h3 {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 8px;
-          }
-        }
-
-        .card-actions {
-          display: flex;
-          gap: 8px;
-        }
-      }
-
-      .card-body {
-        .info-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 12px;
-          font-size: 13px;
-
-          .el-icon {
-            color: #6366f1;
-            font-size: 16px;
-          }
-
-          .label {
-            color: var(--text-secondary);
-            min-width: 70px;
-          }
-
-          .value {
-            color: var(--text-primary);
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-
-            &.schedule {
-              font-weight: 500;
-              color: #10b981;
-            }
-          }
-        }
-      }
-
-      .card-footer {
-        margin-top: 16px;
-        padding-top: 16px;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        display: flex;
-        justify-content: flex-end;
-      }
-    }
+    width: 100%;
+    padding: 8px 0;
   }
 }
 
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.3s ease;
-}
-
-.list-enter-from {
-  opacity: 0;
-  transform: translateY(30px);
-}
-
-.list-leave-to {
-  opacity: 0;
-  transform: scale(0.9);
-}
+.text-danger { color: var(--color-danger); }
+.mb-0 { margin-bottom: 0; }
 </style>

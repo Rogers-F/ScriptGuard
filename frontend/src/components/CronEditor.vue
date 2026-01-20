@@ -16,48 +16,21 @@
     <div v-if="frequency === 'specific'" class="config-section">
       <label class="label">执行时间（北京时间）</label>
       <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap">
-        <el-input
-          v-model="specificHour"
-          placeholder="时"
-          type="number"
-          :min="0"
-          :max="23"
+        <el-time-picker
+          v-model="specificTime"
+          format="HH:mm:ss"
+          value-format="HH:mm:ss"
+          placeholder="选择时间"
           @change="generateCron"
-          style="width: 80px"
-        >
-          <template #append>时</template>
-        </el-input>
-        <span>:</span>
-        <el-input
-          v-model="specificMinute"
-          placeholder="分"
-          type="number"
-          :min="0"
-          :max="59"
-          @change="generateCron"
-          style="width: 80px"
-        >
-          <template #append>分</template>
-        </el-input>
-        <span>:</span>
-        <el-input
-          v-model="specificSecond"
-          placeholder="秒"
-          type="number"
-          :min="0"
-          :max="59"
-          @change="generateCron"
-          style="width: 80px"
-        >
-          <template #append>秒</template>
-        </el-input>
+          style="width: 200px"
+        />
         <el-button @click="setCurrentTime" size="small">
           <el-icon><Clock /></el-icon>
           使用当前时间
         </el-button>
       </div>
       <div style="margin-top: 12px; font-size: 13px; color: var(--text-secondary)">
-        💡 示例：11:00:53 表示每天上午11点00分53秒执行
+        🕐 当前北京时间：{{ currentBeijingTime }}
       </div>
     </div>
 
@@ -170,6 +143,22 @@ const specificHour = ref(11)
 const specificMinute = ref(0)
 const specificSecond = ref(0)
 const currentBeijingTime = ref('')
+
+// SG-025: 使用 computed 双向绑定 specificTime 与 specificHour/specificMinute/specificSecond
+const specificTime = computed({
+  get: () => {
+    const h = String(specificHour.value || 0).padStart(2, '0')
+    const m = String(specificMinute.value || 0).padStart(2, '0')
+    const s = String(specificSecond.value || 0).padStart(2, '0')
+    return `${h}:${m}:${s}`
+  },
+  set: (val) => {
+    const parts = String(val || '00:00:00').split(':')
+    specificHour.value = parseInt(parts[0] || '0', 10) || 0
+    specificMinute.value = parseInt(parts[1] || '0', 10) || 0
+    specificSecond.value = parseInt(parts[2] || '0', 10) || 0
+  }
+})
 
 const dailyTime = ref('09:00:00')
 const weekDays = ref([1]) // 周一
