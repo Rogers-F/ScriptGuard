@@ -21,4 +21,5 @@ const (
 	ConfigKeyExecutionTimeoutSeconds = "execution_timeout_seconds"
 	ConfigKeyCloseToTray             = "close_to_tray"             // 关闭时最小化到托盘
 	ConfigKeyTrayHintShown           = "tray_hint_shown"           // 是否已显示托盘提示
+	ConfigKeyAutoStartEnabled        = "auto_start_enabled"        // 是否开机自启动
 )

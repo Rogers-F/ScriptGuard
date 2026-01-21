@@ -492,6 +492,85 @@ func (a *App) TestNotification(target string, webhook string) error {
 	return a.notifier.SendTest(target, webhook)
 }
 
+// ==================== 开机自启动 API ====================
+
+const autoStartAppName = "ScriptGuard"
+
+// GetAutoStartEnabled 获取当前"系统层面"的自启动状态
+func (a *App) GetAutoStartEnabled() bool {
+	exePath, err := os.Executable()
+	if err == nil {
+		// 开机自启动时使用 --autostart 参数
+		enabled, err := services.IsAutoStartEnabled(autoStartAppName, exePath, []string{"--autostart"})
+		if err == nil {
+			return enabled
+		}
+		log.Printf("读取开机自启动状态失败: %v，回退到配置表", err)
+	} else {
+		log.Printf("获取应用可执行文件路径失败: %v，回退到配置表", err)
+	}
+
+	cfg, err := a.GetAllConfig()
+	if err != nil {
+		log.Printf("读取配置表失败: %v", err)
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(cfg[models.ConfigKeyAutoStartEnabled]), "true")
+}
+
+// SetAutoStartEnabled 设置开机自启动
+func (a *App) SetAutoStartEnabled(enabled bool) error {
+	exePath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("获取应用可执行文件路径失败: %w", err)
+	}
+
+	// 开机自启动时使用 --autostart 参数，实现静默启动到托盘
+	args := []string{"--autostart"}
+
+	// 记录变更前系统状态，用于失败回滚
+	oldEnabled, err := services.IsAutoStartEnabled(autoStartAppName, exePath, args)
+	if err != nil {
+		return fmt.Errorf("读取当前开机自启动状态失败: %w", err)
+	}
+
+	if err := services.SetAutoStartEnabled(autoStartAppName, exePath, args, enabled); err != nil {
+		return fmt.Errorf("设置开机自启动失败: %w", err)
+	}
+
+	// 设置后校验
+	newEnabled, err := services.IsAutoStartEnabled(autoStartAppName, exePath, args)
+	if err != nil {
+		rollbackErr := services.SetAutoStartEnabled(autoStartAppName, exePath, args, oldEnabled)
+		if rollbackErr != nil {
+			return fmt.Errorf("设置后校验失败: %v；且回滚失败: %v", err, rollbackErr)
+		}
+		return fmt.Errorf("设置后校验失败，已回滚: %w", err)
+	}
+	if newEnabled != enabled {
+		rollbackErr := services.SetAutoStartEnabled(autoStartAppName, exePath, args, oldEnabled)
+		if rollbackErr != nil {
+			return fmt.Errorf("开机自启动状态校验失败(期望=%v 实际=%v)；且回滚失败: %v", enabled, newEnabled, rollbackErr)
+		}
+		return fmt.Errorf("开机自启动状态校验失败(期望=%v 实际=%v)，已回滚", enabled, newEnabled)
+	}
+
+	// 写入配置表
+	value := "false"
+	if enabled {
+		value = "true"
+	}
+	if err := a.UpdateConfig(models.ConfigKeyAutoStartEnabled, value); err != nil {
+		rollbackErr := services.SetAutoStartEnabled(autoStartAppName, exePath, args, oldEnabled)
+		if rollbackErr != nil {
+			return fmt.Errorf("写入配置失败: %v；且回滚开机自启动失败: %v", err, rollbackErr)
+		}
+		return fmt.Errorf("写入配置失败，已回滚开机自启动: %w", err)
+	}
+
+	return nil
+}
+
 // ExportDebugLogs 导出调试日志到文件
 func (a *App) ExportDebugLogs(frontendLogs string) (string, error) {
 	// 打开保存文件对话框

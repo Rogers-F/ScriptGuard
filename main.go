@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	"os"
 	"sync/atomic"
 
 	"scriptguard/backend"
@@ -10,6 +11,16 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
+
+// isAutoStart 检查是否为开机自启动模式
+func isAutoStart() bool {
+	for _, arg := range os.Args[1:] {
+		if arg == "--autostart" || arg == "-autostart" {
+			return true
+		}
+	}
+	return false
+}
 
 //go:embed all:frontend/dist
 var assets embed.FS
@@ -110,7 +121,10 @@ func main() {
 		showWindow()
 	})
 
-	mainWindow.Show()
+	// 开机自启动模式：静默启动到托盘，不显示主窗口
+	if !isAutoStart() {
+		mainWindow.Show()
+	}
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)

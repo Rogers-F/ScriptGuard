@@ -142,7 +142,10 @@ const messages = {
         english: 'English',
         tray: '系统托盘',
         closeToTray: '关闭时最小化到托盘',
-        closeToTrayDesc: '点击关闭按钮时隐藏窗口而非退出程序'
+        closeToTrayDesc: '点击关闭按钮时隐藏窗口而非退出程序',
+        startup: '启动设置',
+        autoStart: '开机自动启动',
+        autoStartDesc: '登录系统时自动在后台启动 ScriptGuard'
       },
 
       // 告警通知
@@ -321,7 +324,10 @@ const messages = {
         english: 'English',
         tray: 'System Tray',
         closeToTray: 'Minimize to tray on close',
-        closeToTrayDesc: 'Hide window instead of quitting when clicking close button'
+        closeToTrayDesc: 'Hide window instead of quitting when clicking close button',
+        startup: 'Startup',
+        autoStart: 'Start on login',
+        autoStartDesc: 'Automatically start ScriptGuard in background when you log in'
       },
 
       alerts: {

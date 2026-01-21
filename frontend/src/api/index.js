@@ -15,7 +15,9 @@ const {
   UpdateConfig,
   SelectScriptFile,
   TestNotification,
-  ExportDebugLogs
+  ExportDebugLogs,
+  GetAutoStartEnabled,
+  SetAutoStartEnabled
 } = App
 
 // API 封装
@@ -82,6 +84,15 @@ export const api = {
   // 导出调试日志
   async exportDebugLogs(frontendLogs = '') {
     return await ExportDebugLogs(frontendLogs)
+  },
+
+  // 开机自启动
+  async getAutoStartEnabled() {
+    return await GetAutoStartEnabled()
+  },
+
+  async setAutoStartEnabled(enabled) {
+    return await SetAutoStartEnabled(enabled)
   }
 }
 

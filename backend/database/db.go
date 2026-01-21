@@ -81,6 +81,7 @@ func initDefaultConfig() error {
 		models.ConfigKeyLogRetentionDays:        "30",
 		models.ConfigKeyMaxConcurrency:          "5",
 		models.ConfigKeyExecutionTimeoutSeconds: "3600",
+		models.ConfigKeyAutoStartEnabled:        "false",
 	}
 
 	for key, value := range defaults {

@@ -43,6 +43,17 @@
                 <el-switch v-model="generalForm.close_to_tray" @change="saveCloseToTray" />
               </div>
             </div>
+
+            <div class="form-group">
+              <h3>{{ t.settings.general.startup }}</h3>
+              <div class="setting-item">
+                <div class="setting-info">
+                  <span class="setting-label">{{ t.settings.general.autoStart }}</span>
+                  <span class="setting-desc">{{ t.settings.general.autoStartDesc }}</span>
+                </div>
+                <el-switch v-model="generalForm.auto_start" @change="saveAutoStart" />
+              </div>
+            </div>
           </div>
         </el-tab-pane>
 
@@ -174,7 +185,7 @@ const selectedLanguage = ref(langStore.currentLang)
 
 const notificationForm = reactive({ dingtalk_enabled: false, dingtalk_webhook: '', wecom_enabled: false, wecom_webhook: '' })
 const systemForm = reactive({ log_retention_days: 30, max_concurrency: 5, execution_timeout_seconds: 3600 })
-const generalForm = reactive({ close_to_tray: true })
+const generalForm = reactive({ close_to_tray: true, auto_start: false })
 
 onMounted(async () => {
   await loadSettings()
@@ -197,6 +208,8 @@ async function loadSettings() {
     systemForm.max_concurrency = parseInt(config.max_concurrency) || 5
     systemForm.execution_timeout_seconds = parseInt(config.execution_timeout_seconds) || 3600
     generalForm.close_to_tray = config.close_to_tray !== 'false' // 默认 true
+    // 加载开机自启动状态
+    generalForm.auto_start = await api.getAutoStartEnabled()
   } catch (err) { ElMessage.error(t.value.settings.loadFailed) }
 }
 
@@ -204,6 +217,15 @@ async function saveCloseToTray(val) {
   try {
     await api.updateConfig('close_to_tray', val ? 'true' : 'false')
   } catch (err) { ElMessage.error(err.message) }
+}
+
+async function saveAutoStart(val) {
+  try {
+    await api.setAutoStartEnabled(val)
+  } catch (err) {
+    ElMessage.error(err.message || err)
+    generalForm.auto_start = !val // 回滚 UI
+  }
 }
 
 async function loadEnvironments() {
