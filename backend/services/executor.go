@@ -81,14 +81,16 @@ func (s *ExecutorService) ExecuteScript(task *models.Task) (*models.Execution, e
 	}
 
 	// SG-004: 支持超时控制
+	// SG-030: Windows 下通过 cmd /c 设置 UTF-8 代码页，确保所有输出为 UTF-8
 	var cmd *exec.Cmd
 	var cancel context.CancelFunc
+	cmdLine := fmt.Sprintf("chcp 65001 >nul && conda run -n %s python %s", task.CondaEnv, task.ScriptPath)
 	if s.timeout > 0 {
 		ctx, c := context.WithTimeout(context.Background(), s.timeout)
 		cancel = c
-		cmd = exec.CommandContext(ctx, "conda", "run", "-n", task.CondaEnv, "python", task.ScriptPath)
+		cmd = exec.CommandContext(ctx, "cmd", "/c", cmdLine)
 	} else {
-		cmd = exec.Command("conda", "run", "-n", task.CondaEnv, "python", task.ScriptPath)
+		cmd = exec.Command("cmd", "/c", cmdLine)
 		cancel = func() {}
 	}
 	defer cancel()
@@ -358,17 +360,19 @@ func (s *ExecutorService) SaveInfoLog(executionID, taskID, content string) {
 }
 
 // decodeToUTF8 尝试将字节转换为 UTF-8
-// 如果已经是有效 UTF-8 则直接返回，否则尝试从 GBK 解码
+// 优先假设是 UTF-8（因为已设置 chcp 65001），仅在明确非 UTF-8 时尝试 GBK 解码
 func decodeToUTF8(data []byte) string {
+	// 快速路径：有效 UTF-8 直接返回
 	if utf8.Valid(data) {
 		return string(data)
 	}
-	// 尝试 GBK 解码
+	// 尝试 GBK 解码，仅当解码结果是有效 UTF-8 时才使用
 	decoded, err := simplifiedchinese.GBK.NewDecoder().Bytes(data)
-	if err != nil {
-		return string(data) // 解码失败，返回原始数据
+	if err == nil && utf8.Valid(decoded) {
+		return string(decoded)
 	}
-	return string(decoded)
+	// 都失败则返回原始数据（可能包含二进制内容）
+	return string(data)
 }
 
 // readLineWithLimit 读取一行，超过 maxBytes 截断但继续 drain 直到换行
