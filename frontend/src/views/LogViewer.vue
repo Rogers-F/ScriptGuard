@@ -87,7 +87,11 @@ const filteredLogs = computed(() => {
 watch(filteredLogs, async () => { if (autoScroll.value) { await nextTick(); scrollToBottom() } })
 function scrollToBottom() { if (logBodyRef.value) logBodyRef.value.scrollTop = logBodyRef.value.scrollHeight }
 function formatTime(time) { return new Date(time).toLocaleTimeString('zh-CN', { hour12: false }) }
-function clearLogs() { logs.value = [] }
+function clearLogs() {
+  logs.value = []
+  stopPolling() // 停止轮询，避免清空后立即重新加载
+  autoScroll.value = false
+}
 
 async function loadLogs() {
   if (isLoading.value) return

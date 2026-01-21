@@ -15,8 +15,10 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"golang.org/x/text/encoding/simplifiedchinese"
 )
 
 // 日志处理常量
@@ -92,7 +94,10 @@ func (s *ExecutorService) ExecuteScript(task *models.Task) (*models.Execution, e
 	defer cancel()
 
 	// SG-029: 设置 UTF-8 编码，修复 Windows conda 中文输出乱码问题
-	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8")
+	cmd.Env = append(os.Environ(),
+		"PYTHONIOENCODING=utf-8",
+		"PYTHONUTF8=1", // Python 3.7+ UTF-8 模式
+	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
 	// SG-005: 检查 Pipe 错误
@@ -352,6 +357,20 @@ func (s *ExecutorService) SaveInfoLog(executionID, taskID, content string) {
 	s.saveLog(logMsg)
 }
 
+// decodeToUTF8 尝试将字节转换为 UTF-8
+// 如果已经是有效 UTF-8 则直接返回，否则尝试从 GBK 解码
+func decodeToUTF8(data []byte) string {
+	if utf8.Valid(data) {
+		return string(data)
+	}
+	// 尝试 GBK 解码
+	decoded, err := simplifiedchinese.GBK.NewDecoder().Bytes(data)
+	if err != nil {
+		return string(data) // 解码失败，返回原始数据
+	}
+	return string(decoded)
+}
+
 // readLineWithLimit 读取一行，超过 maxBytes 截断但继续 drain 直到换行
 func readLineWithLimit(r *bufio.Reader, maxBytes int) (line string, truncated bool, readAny bool, err error) {
 	buf := make([]byte, 0, 1024)
@@ -385,7 +404,8 @@ func readLineWithLimit(r *bufio.Reader, maxBytes int) (line string, truncated bo
 		}
 
 		// 统一去掉行尾换行符，避免日志落库携带 '\n'
-		line = strings.TrimRight(string(buf), "\r\n")
+		// SG-030: 自动检测并转换 GBK 编码为 UTF-8
+		line = strings.TrimRight(decodeToUTF8(buf), "\r\n")
 		err = e
 		return
 	}
